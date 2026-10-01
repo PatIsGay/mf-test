@@ -274,6 +274,20 @@
   /* Übungskarte: „gemacht am“ (Datums-Chips) und datierte Notizen je Übung */
   .exdone,.nrow{display:flex;flex-direction:column;gap:4px}
   .exdone .ftl,.nrow .ftl{font-size:11px;line-height:1.25;color:var(--ink2)}
+  /* Übungskarte in der Bibliothek: klar getrennte Abschnitte mit Überschrift; „Soll verbessern“ hervorgehoben und oben */
+  .exsec{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+  .exsec>.ftl,.exsec-h{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);line-height:1.25}
+  .exsec-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .exsec-h .tog{text-transform:none;letter-spacing:0;font-size:13px}
+  .exsec.ziel{border-top:0;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px}
+  .exsec.ziel .exsec-h>span{color:var(--accent)}
+  .zrow{font-size:14px;line-height:1.35;color:var(--ink)}
+  .zrow .zw{font-size:12px;color:var(--ink2)}
+  .zleer{font-size:13px;color:var(--ink2)}
+  /* zugeklappte Karte: Ziel-Kästchen unter dem Namen */
+  .zchips{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:5px}
+  .zchips .zl{font-size:11px;color:var(--ink2);margin-right:2px}
+  .zchip{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
   .nrow .rts{display:flex;flex-direction:column;min-width:0}
   .nrow .nl{display:block;width:100%;text-align:left;font-size:12px;color:var(--ink);padding:4px 0;border-top:1px solid var(--line2)}
   .nrow .nl:first-child{border-top:0}
@@ -438,7 +452,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.5';
+const APP_VERSION='1.0.6';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -1466,7 +1480,7 @@ function rBib(){
   const items=EX.filter(e=>f==='alle'||(f==='K'&&e.cat==='K')||(f==='I'&&e.cat==='I')||(f==='test'&&exStatus(e)==='testphase')||(f==='geparkt'&&['geparkt','verworfen'].includes(exStatus(e))));
   // Test-Retest: letzte 8 Paare, chronologisch; Tipp öffnet den Tag
   const rtRow=e=>{const ps=rtPairs(e.id).slice(-8);if(!ps.length)return '';
-    return `<div class="rtrow"><span class="ftl">Test-Retest</span><div class="rts">${ps.map(o=>`<button class="rtl" data-rtday="${o.k}">${dfmt(o.k)} · ${esc(testShort(o.rt.test))} · ${rtShort(o.rt)}</button>`).join('')}</div></div>`};
+    return `<div class="rtrow exsec"><span class="ftl">Test-Retest</span><div class="rts">${ps.map(o=>`<button class="rtl" data-rtday="${o.k}">${dfmt(o.k)} · ${esc(testShort(o.rt.test))} · ${rtShort(o.rt)}</button>`).join('')}</div></div>`};
   // „gemacht am“: letzte 8 Tage, an denen die Übung abgehakt und nicht übersprungen wurde, älteste links; nur Navigation, keine Werte
   const doneRow=e=>{const ks=Object.keys(S.days).filter(k=>(S.days[k].done||[]).some(a=>(a.ex||[]).some(i=>i.id===e.id&&i.r&&!i.skip))).sort().slice(-8);if(!ks.length)return '';
     return `<div class="exdone"><span class="ftl">gemacht am</span><div class="chips">${ks.map(k=>`<button class="chip sm" data-exday="${k}">${dfmt(k)}</button>`).join('')}</div></div>`};
@@ -1474,24 +1488,31 @@ function rBib(){
   const notesRow=e=>{const ns=(S.exNotes||{})[e.id]||[];
     const un=[];Object.keys(S.days).forEach(k=>(S.days[k].done||[]).forEach(a=>(a.ex||[]).forEach(i=>{if(i.id===e.id&&i.note)un.push({d:k,t:i.note})})));
     const all=[...ns.map((n,i)=>({d:n.d,t:n.t,i})),...un].sort((a,b)=>b.d.localeCompare(a.d)||(a.i==null)-(b.i==null)||(b.i??0)-(a.i??0));
-    return (all.length?`<div class="nrow"><span class="ftl">Notizen</span><div class="rts">${all.map(o=>o.i!=null?`<button class="nl" data-exnote="${e.id}:${o.i}"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)}</button>`:`<div class="nl"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)} <span class="badge">Einheit</span></div>`).join('')}</div></div>`:'')
-      +`<div class="chips"><button class="chip sm" data-addnote="${e.id}">+ Notiz</button></div>`};
+    return `<div class="nrow exsec"><span class="ftl">Notizen</span>${all.length?`<div class="rts">${all.map(o=>o.i!=null?`<button class="nl" data-exnote="${e.id}:${o.i}"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)}</button>`:`<div class="nl"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)} <span class="badge">Einheit</span></div>`).join('')}</div>`:''}`
+      +`<div class="chips"><button class="chip sm" data-addnote="${e.id}">+ Notiz</button></div></div>`};
+  // „Soll verbessern“: Tests der Übung mit Ziel und letztem Wert, oben auf der Karte; „ändern“ öffnet die Auswahl wie im Plan
+  const zielSec=e=>{const ts=exTests(e.id);
+    return `<div class="exsec ziel"><div class="exsec-h"><span>Soll verbessern</span><button class="tog" data-exziel="${e.id}">${ts.length?'ändern':'wählen'}</button></div>`
+      +(ts.length?ts.map((t,i)=>{const z=zielOf(t);return `<div class="zrow"><b>${esc(goalName(t))}</b>${i===0&&ts.length>1?' <span class="badge">primär</span>':''}<div class="zw">${z?nw('Ziel '+goalVal(z.test,z.target))+' · ':''}${nw(goalLast(t))}</div></div>`}).join(''):'<div class="zleer">Noch nichts gewählt.</div>')+`</div>`};
+  // zugeklappt: Ziel-Kästchen unter dem Namen (aufgeklappt zeigt der Abschnitt die Einzelheiten, nichts doppelt)
+  const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${ts.map(t=>`<span class="zchip">${esc(goalName(t))}</span>`).join('')}</span>`:''};
   // leere Bibliothek (echter Kanal beim Start): nur Hinweis und „+ Neue Übung“, ohne Suche und Filter
   const leer=!EX.length;
   main.innerHTML=nav+inb+(leer?'':`<input type="text" id="q" placeholder="Suchen, auch Spitznamen"><div class="chips">${[['alle','Alle'],['K','Korrektiv'],['I','Intensiv'],['test','Testphase'],['geparkt','Geparkt']].map(([k,l])=>`<button class="chip sm ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}</div>`)+`
-  <section class="card"><div class="list" id="exl">${leer?'<div class="hint" id="exEmpty">Noch keine Übungen. Lege die erste mit „+ Neue Übung“ an.</div>':items.length?'':'<div class="hint">Keine Übung in diesem Filter.</div>'}${items.map(e=>{const st=exStatus(e);const b=bilanz(e);const pb=planBlocksOf(e.id);const ip=pb.length>0;return `<div class="ex ${S.openEx===e.id?'open':''}"><div class="head"><button class="name" data-open="${e.id}"><b>${esc(e.name)} <span class="act ${e.cat}">${e.cat}</span> ${ip?`<span class="badge">im Plan · ${esc(pb.map(x=>x.name).join(', '))}</span>`:''} ${st!=='aktiv'?`<span class="badge ${st==='testphase'?'test':st}">${st}</span>`:''}</b><small>${[esc(e.region||''),doseStr(e.d)].filter(Boolean).join(' · ')}${e.side==='getrennt'?' · L/R':''}</small></button></div>
-    <div class="body"><div class="bilanz"><div><b>${b.n}</b><small>gemacht</small></div><div><b>${b.p}</b><small>Probleme</small></div></div>
+  <section class="card"><div class="list" id="exl">${leer?'<div class="hint" id="exEmpty">Noch keine Übungen. Lege die erste mit „+ Neue Übung“ an.</div>':items.length?'':'<div class="hint">Keine Übung in diesem Filter.</div>'}${items.map(e=>{const st=exStatus(e);const b=bilanz(e);const pb=planBlocksOf(e.id);const ip=pb.length>0;return `<div class="ex ${S.openEx===e.id?'open':''}"><div class="head"><button class="name" data-open="${e.id}"><b>${esc(e.name)} <span class="act ${e.cat}">${e.cat}</span> ${ip?`<span class="badge">im Plan · ${esc(pb.map(x=>x.name).join(', '))}</span>`:''} ${st!=='aktiv'?`<span class="badge ${st==='testphase'?'test':st}">${st}</span>`:''}</b><small>${[esc(e.region||''),doseStr(e.d)].filter(Boolean).join(' · ')}${e.side==='getrennt'?' · L/R':''}</small>${zielChips(e)}</button></div>
+    <div class="body">${zielSec(e)}
+    <div class="exsec"><span class="ftl">Durchführung</span><div class="bilanz"><div><b>${b.n}</b><small>gemacht</small></div><div><b>${b.p}</b><small>Probleme</small></div></div>
     ${S.openEx===e.id?doneRow(e):''}
-    ${exTests(e.id).length?`<div class="goalline">${exTestsLine(e)}</div>`:''}
+    ${e.first?`<div class="hint">erstmals am ${e.first}</div>`:''}</div>
     ${S.openEx===e.id?rtRow(e)+notesRow(e):''}
-    ${e.first?`<div class="hint">erstmals am ${e.first}</div>`:''}
+    <div class="exsec"><span class="ftl">Cues</span>
     ${e.video?`<div class="chips"><button class="chip sm" data-exvideo="${e.id}">▶ Video</button></div>`:''}
     ${e.cues.length?`<div class="sortlist" data-sortcues="${e.id}">${e.cues.map((c,ci)=>`<div class="sortrow">${e.cues.length>1?DRAGH:''}<button class="cue edit" data-bec="${e.id}:${ci}">${esc(c)}</button></div>`).join('')}</div>`:'<div class="hint">Noch keine eigenen Cues.</div>'}
     <div class="chips"><button class="chip sm" data-addcue="${e.id}">+ Cue</button></div>
-    ${e.tags.map(t=>`<details><summary>${esc(t)} · ${(PRINZIP[t]||[]).length} Prinzip-Cues</summary>${(PRINZIP[t]||[]).map(c=>`<div class="cue p">${esc(c)}</div>`).join('')}</details>`).join('')}
-    <div class="row"><span class="lbl">Status</span><div class="chips">${['aktiv','testphase','geparkt','verworfen'].map(x=>`<button class="chip sm ${st===x?'on':''}" data-st="${e.id}:${x}">${x}</button>`).join('')}</div></div>
+    ${e.tags.map(t=>`<details><summary>${esc(t)} · ${(PRINZIP[t]||[]).length} Prinzip-Cues</summary>${(PRINZIP[t]||[]).map(c=>`<div class="cue p">${esc(c)}</div>`).join('')}</details>`).join('')}</div>
+    <div class="exsec"><div class="row"><span class="lbl">Status</span><div class="chips">${['aktiv','testphase','geparkt','verworfen'].map(x=>`<button class="chip sm ${st===x?'on':''}" data-st="${e.id}:${x}">${x}</button>`).join('')}</div></div>
     ${ip?`<button class="btn ghost wide" data-rmplan="${e.id}">Aus dem Plan nehmen</button>`:st!=='verworfen'?`<div class="row" style="flex-wrap:nowrap"><button class="btn ghost" style="flex:1" data-toplan="${e.id}">In den Plan</button>${qBtn('toplan')}</div>${qHint('toplan','Testphase: die Übung bleibt gekennzeichnet, bis du sie auf aktiv setzt. Sie darf im Plan stehen.')}`:''}
-    <div class="row" style="justify-content:flex-end"><button class="tog" data-exedit="${e.id}" style="font-size:13px">Bearbeiten</button></div>
+    <div class="row" style="justify-content:flex-end"><button class="tog" data-exedit="${e.id}" style="font-size:13px">Bearbeiten</button></div></div>
     </div></div>`}).join('')}</div></section>
   <button class="btn ghost wide" id="newExBib">+ Neue Übung</button>`;
   document.querySelectorAll('[data-bibopen]').forEach(b=>b.onclick=()=>openBibSheet(b.dataset.bibopen));
@@ -1500,6 +1521,7 @@ function rBib(){
   const qi=document.getElementById('q'); if(qi)qi.oninput=e=>{const v=e.target.value.toLowerCase();document.querySelectorAll('#exl .ex').forEach(it=>it.style.display=it.textContent.toLowerCase().includes(v)?'':'none')};
   document.getElementById('newExBib').onclick=()=>newExerciseSheet(id=>{S.openEx=id;S.bibFilter='alle';render();const c=document.querySelector('#exl .ex.open');if(c)c.scrollIntoView({block:'nearest'})});
   document.querySelectorAll('[data-exedit]').forEach(b=>b.onclick=()=>exEditSheet(exById(b.dataset.exedit)));
+  document.querySelectorAll('[data-exziel]').forEach(b=>b.onclick=()=>exTestsSheet(exById(b.dataset.exziel),()=>{closeSheet();render()}));
   document.querySelectorAll('[data-exvideo]').forEach(b=>b.onclick=()=>openVideo((exById(b.dataset.exvideo)||{}).video));
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.openEx=S.openEx===b.dataset.open?null:b.dataset.open;render()});
   document.querySelectorAll('[data-rtday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.rtday));
