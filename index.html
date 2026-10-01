@@ -428,7 +428,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.3';
+const APP_VERSION='1.0.4';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -2023,11 +2023,86 @@ function exportData(){
     save();toast('Exportiert: '+name)}
   catch(e){toast('Export fehlgeschlagen')}
 }
+// ---------- Übungsdatei (art:'uebungen', format 1) ----------
+// Aufbau: {app:'MF-Log', art:'uebungen', format:1, erstellt:'JJJJ-MM-TT', uebungen:[{name, kategorie:'K'|'I', seite:'beidseitig'|'getrennt',
+//   dosis:{saetze, anzahl, einheit:'Wdh'|'s'|'Atemzüge', kg?}, region?, prinzipTags?, video?, status?:'testphase'|'aktiv', cues?, notiz?}]}
+// Beschreibung für Menschen und Agenten: app/README.md, Abschnitt „Übungsdatei“. Prüfwerkzeug: app/tools/uebungen-pruefen.js (nutzt pruefeUebungen).
+const UEB_FELDER=['name','kategorie','seite','dosis','region','prinzipTags','video','status','cues','notiz'];
+const UEB_DOSIS=['saetze','anzahl','einheit','kg'];
+const UEB_EINHEITEN=['Wdh','s','Atemzüge'];
+const nameKey=v=>String(v||'').trim().toLowerCase();
+// Prüft die ganze Datei; liefert {fehler:[Texte], liste:[Übungen im App-Format ohne id]}. Bei Fehlern wird nichts übernommen.
+function pruefeUebungen(obj){
+  const fehler=[], liste=[];
+  if(!obj||typeof obj!=='object'||obj.app!=='MF-Log'||obj.art!=='uebungen')return {fehler:['Keine MF-Log-Übungsdatei'],liste};
+  if(obj.format!==1)fehler.push('Unbekanntes Format „'+obj.format+'“, erwartet 1');
+  if(!Array.isArray(obj.uebungen)||!obj.uebungen.length){fehler.push('Die Datei enthält keine Übungen');return {fehler,liste}}
+  const txt=v=>typeof v==='string';
+  obj.uebungen.forEach((u,i)=>{
+    const nr='Übung '+(i+1)+(u&&txt(u.name)&&u.name.trim()?' „'+u.name.trim()+'“':'');
+    if(!u||typeof u!=='object'||Array.isArray(u)){fehler.push(nr+': kein gültiger Eintrag');return}
+    const n0=fehler.length, f=m=>fehler.push(nr+': '+m);
+    const fremd=Object.keys(u).filter(k=>!UEB_FELDER.includes(k)); if(fremd.length)f('unbekannte Felder '+fremd.join(', '));
+    const name=txt(u.name)?u.name.trim():''; if(!name)f('Name fehlt'); else if(name.length>80)f('Name länger als 80 Zeichen');
+    if(!['K','I'].includes(u.kategorie))f('Kategorie muss „K“ (Korrektiv) oder „I“ (Intensiv) sein');
+    if(!['beidseitig','getrennt'].includes(u.seite))f('Seite muss „beidseitig“ oder „getrennt“ sein');
+    const d=u.dosis;
+    if(!d||typeof d!=='object'||Array.isArray(d))f('Dosis fehlt');
+    else{
+      const df=Object.keys(d).filter(k=>!UEB_DOSIS.includes(k)); if(df.length)f('unbekannte Dosis-Felder '+df.join(', '));
+      if(!Number.isInteger(d.saetze)||d.saetze<1||d.saetze>20)f('Sätze müssen eine ganze Zahl von 1 bis 20 sein');
+      if(!Number.isInteger(d.anzahl)||d.anzahl<1||d.anzahl>999)f('Anzahl muss eine ganze Zahl von 1 bis 999 sein');
+      if(!UEB_EINHEITEN.includes(d.einheit))f('Einheit muss „Wdh“, „s“ oder „Atemzüge“ sein');
+      if(d.kg!=null&&(typeof d.kg!=='number'||!isFinite(d.kg)||d.kg<=0||d.kg>500))f('kg muss eine Zahl über 0 sein oder fehlen');
+    }
+    if(u.region!=null&&!txt(u.region))f('Region muss ein Text sein');
+    if(u.prinzipTags!=null&&(!Array.isArray(u.prinzipTags)||u.prinzipTags.some(t=>!PRINZIP_TAGS.includes(t))))f('Prinzip-Tags nur aus: '+PRINZIP_TAGS.join(', '));
+    if(u.video!=null&&!txt(u.video))f('Video muss ein Text sein');
+    if(u.status!=null&&!['testphase','aktiv'].includes(u.status))f('Status muss „testphase“ oder „aktiv“ sein');
+    if(u.cues!=null&&(!Array.isArray(u.cues)||u.cues.some(c=>!txt(c)||!c.trim())))f('Cues müssen eine Liste nicht leerer Texte sein');
+    if(u.notiz!=null&&!txt(u.notiz))f('Notiz muss ein Text sein');
+    if(name&&obj.uebungen.slice(0,i).some(v=>v&&nameKey(v.name)===nameKey(name)))f('Name kommt in der Datei doppelt vor');
+    if(fehler.length>n0)return;
+    const e={name,cat:u.kategorie,region:txt(u.region)?u.region.trim():'',side:u.seite,dose:'',tags:[...new Set(u.prinzipTags||[])],status:u.status||'testphase',
+      cues:(u.cues||[]).map(c=>c.trim()),d:{sets:d.saetze,n:d.anzahl,u:d.einheit,...(d.kg!=null?{kg:d.kg}:{})}};
+    const vu=normUrl(u.video); if(vu)e.video=vu;
+    if(txt(u.notiz)&&u.notiz.trim())e.notiz=u.notiz.trim();
+    liste.push(e);
+  });
+  return {fehler,liste};
+}
+// Vorschau und Übernahme: neue Übungen hinzufügen, gleichnamige (auch verworfene) überspringen; sonst bleibt alles unverändert
+function importUebungen(obj,fname){
+  const {fehler,liste}=pruefeUebungen(obj);
+  if(fehler.length){
+    openSheet(`<h3>Übungen importieren</h3><div class="impbox"><span>Datei: <b>${esc(fname)}</b></span></div>
+      <div class="warn" id="uebFehler"><b>Datei nicht übernommen.</b> ${fehler.length} Fehler:<ul style="margin:6px 0 0;padding-left:18px">${fehler.slice(0,12).map(t=>`<li>${esc(t)}</li>`).join('')}${fehler.length>12?`<li>… und ${fehler.length-12} weitere</li>`:''}</ul></div>
+      <div class="hint">Lass die Datei vom Übungs-Agenten korrigieren und importiere sie dann neu.</div>`);
+    return}
+  const da=new Set(EX.map(e=>nameKey(e.name)));
+  const neu=liste.filter(e=>!da.has(nameKey(e.name))), alt=liste.filter(e=>da.has(nameKey(e.name)));
+  openSheet(`<h3>Übungen importieren</h3><div class="impbox"><span>Datei: <b>${esc(fname)}</b></span><span><b>${neu.length}</b> neu · <b>${alt.length}</b> schon vorhanden</span></div>
+    ${neu.length?`<div class="list" id="uebNeu">${neu.map(e=>`<div class="item"><span class="act ${e.cat}">${e.cat}</span><div class="t"><b>${esc(e.name)}</b><small>${esc(doseStr(e.d))} · ${esc(e.side)}${e.tags.length?' · '+esc(e.tags.join(', ')):''}${e.cues.length?' · '+e.cues.length+(e.cues.length===1?' Cue':' Cues'):''}${e.video?' · Video':''} · ${esc(e.status)}</small></div></div>`).join('')}</div>`:''}
+    ${alt.length?`<div class="hint" id="uebAlt">Schon vorhanden, werden übersprungen: ${alt.map(e=>esc(e.name)).join(', ')}</div>`:''}
+    ${neu.length?`<div class="hint">Fügt nur diese Übungen hinzu. Plan, Tage und alles andere in ${esc(APP_NAME)} bleiben unverändert.</div>
+    <div class="row"><button class="btn primary" style="flex:1" id="uebYes">${neu.length===1?'1 Übung hinzufügen':neu.length+' Übungen hinzufügen'}</button></div>`:'<div class="hint">Nichts Neues in der Datei.</div>'}`);
+  const yes=document.getElementById('uebYes'); if(!yes)return;
+  yes.onclick=()=>{
+    let sq=Date.now(); const nextId=()=>{while(EX.some(x=>x.id==='c'+sq)||(S.exDeleted||[]).includes('c'+sq))sq++;return 'c'+(sq++)};
+    S.customEx=S.customEx||[]; S.cues=S.cues||{}; S.exNotes=S.exNotes||{};
+    neu.forEach(u=>{const {notiz,...rest}=u; const e=Object.assign({id:nextId()},rest,{first:fmt(today)});
+      EX.push(e); S.customEx.push(e); if(e.cues.length)S.cues[e.id]=e.cues;
+      if(notiz)S.exNotes[e.id]=[{d:iso(today),t:notiz}];
+      addEvent(e.name+': neu angelegt (Import, '+(e.status==='aktiv'?'aktiv':'Testphase')+')')});
+    save(); closeSheet(); render(); toast(neu.length===1?'1 Übung hinzugefügt':neu.length+' Übungen hinzugefügt')};
+}
 // Import: Datei lesen, prüfen, Vorschau; „Ersetzen“ ist die Entscheidung (ein Dialog)
 function importFile(file){
   const rd=new FileReader();
   rd.onerror=()=>toast('Datei nicht lesbar');
   rd.onload=()=>{let obj=null;try{obj=JSON.parse(rd.result)}catch(e){}
+    // Übungsdatei (z. B. vom Übungs-Agenten erstellt): fügt nur Übungen hinzu, in beiden Kanälen erlaubt
+    if(obj&&obj.app==='MF-Log'&&obj.art==='uebungen'){importUebungen(obj,file.name);return}
     if(!obj||obj.app!=='MF-Log'||!obj.daten||typeof obj.daten!=='object'){toast('Keine MF-Log-Exportdatei');return}
     const dt=obj.daten, days=Object.values(dt.days||{});
     const nTage=days.filter(d=>d&&(d.tf!=null||(d.done||[]).length||(d.notes||[]).length||(d.tests||[]).length)).length;
@@ -2056,7 +2131,7 @@ function mehrSheet(){
     <div class="setrow"><div class="kv"><b>Kanal</b><span>${esc(APP_NAME)}${TEST?' (Beispieldaten)':''}</span><b>Version</b><span>${APP_VERSION}</span><b>Letzter Export</b><span id="lastExp">${S.lastExport?esc(dateDE(S.lastExport))+(age?` (vor ${age} Tag${age===1?'':'en'})`:' (heute)'):'noch nie'}</span></div></div>
     <div class="setrow"><div class="lbl">Daten sichern</div><div class="row"><button class="btn primary" id="expBtn">Exportieren</button><button class="btn ghost" id="impBtn">Importieren</button></div>
       <input type="file" id="impFile" accept=".json,application/json" hidden>
-      <div class="hint">Export als JSON-Datei, z. B. zum Ablegen in Google Drive. Import ersetzt den ganzen Stand dieses Kanals.</div></div>
+      <div class="hint">Export als JSON-Datei, z. B. zum Ablegen in Google Drive. Import einer Sicherung ersetzt den ganzen Stand dieses Kanals; eine Übungsdatei fügt nur Übungen hinzu.</div></div>
     <div class="setrow"><div class="lbl">Erscheinungsbild</div><div class="seg" id="themeSeg">${[['system','System'],['light','Hell'],['dark','Dunkel']].map(([k,l])=>`<button data-theme-set="${k}" class="${th===k?'on':''}">${l}</button>`).join('')}</div></div>
     <div class="setrow" style="margin-top:18px">${TEST?'<button class="btn danger wide" id="resetBtn">Beispieldaten zurücksetzen</button>':'<button class="btn danger wide" id="wipeBtn">Alle Daten löschen</button>'}</div>`);
   document.getElementById('expBtn').onclick=()=>{exportData();mehrSheet()};
