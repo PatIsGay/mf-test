@@ -302,6 +302,11 @@
   .exsec-h .tog{text-transform:none;letter-spacing:0;font-size:13px}
   .exsec.ziel{border-top:0;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px}
   .exsec.ziel .exsec-h>span{color:var(--accent)}
+  /* Merksätze in der Rettungskiste: groß lesbar, Akzentstreifen, Datum darunter */
+  .merk{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:0 0 8px}
+  .merk .mt{display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;font-size:17px;line-height:1.4;font-weight:500;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer}
+  .merk .mf{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
+  .merk .md{font-size:12px;color:var(--ink2)}
   .zrow{font-size:14px;line-height:1.35;color:var(--ink)}
   .zrow .zw{font-size:12px;color:var(--ink2)}
   .zleer{font-size:13px;color:var(--ink2)}
@@ -494,7 +499,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.9';
+const APP_VERSION='1.0.10';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -570,11 +575,12 @@ const TESTS = [
 ];
 // Beispiel-Testwerte (feste Spalten 20.08. und 03.09.) nur im Testkanal
 const TESTVALS = TEST?{'Hüftaußenrotation':[['20.08.',35,40],['03.09.',40,40]],'Hüftinnenrotation':[['20.08.',25,20],['03.09.',30,25]],'Hüftbeugung':[['20.08.','4 cm','6 cm'],['03.09.','2 cm','5 cm']],'Gestrecktes Beinheben (SLR)':[['20.08.',60,70],['03.09.',70,70]],'Schulteraußenrotation':[['20.08.',75,80],['03.09.',80,80]],'Schulterinnenrotation':[['20.08.',50,45],['03.09.',55,50]],'Schulterflexion':[['20.08.',160,165],['03.09.',165,165]],'Kniebeuge':[['20.08.','8 cm','–'],['03.09.','6 cm','–']],'Vorbeuge':[['20.08.','12 cm','–'],['03.09.','9 cm','–']],'Wandstehen PSIS-Kontakt':[['03.09.','nein','–']],'Goblet Hold 60°':[['03.09.','70 s','–']]}:{};
-// Rettungskiste: Einträge in S.rettung ({id,t,a,x}); Beispieleinträge nur im Testkanal
+// Rettungskiste: Einträge in S.rettung ({id,t,a,x}, Merksatz zusätzlich d = Datum ISO); Beispieleinträge nur im Testkanal
 const RETT_SEED=()=>TEST?[
   {id:'r1',t:'Ruhige Pause im Liegen',a:'Notiz',x:'Zehn Minuten hinlegen, langsam atmen, nichts Neues ausprobieren.'},
   {id:'r2',t:'Lange ausatmen',a:'Cue',x:'Fünf ruhige Atemzüge, jeweils lange ausatmen.'},
   {id:'r3',t:'Sanfte Mobilisation',a:'Übung',x:'Leichte Bewegungen ohne Last, 3 min.'},
+  {id:'r4',t:'Erst ausatmen, dann bewegen.',a:'Merksatz',x:'',d:iso(addD(today,-2))},
 ]:[];
 
 // ---------- Zustand ----------
@@ -1968,11 +1974,18 @@ function daySheet(k){
 }
 
 // ---------- Notiz, Aktivität, Rettung, Tests ----------
+const NOTE_HINT='Erscheint im Tagesdetail des Kalenders und unter Notizen ohne Bezug in der Bibliothek. Cues legst du direkt an der Übung an.';
+const MERK_HINT='Kommt mit heutigem Datum in die Rettungskiste (oben unter Merksätze) und ins Tagesdetail.';
 function noteSheet(){
-  openSheet(`<h3>Notiz</h3><textarea id="nt" placeholder="Was ist dir aufgefallen?"></textarea><div class="hint">Erscheint im Tagesdetail des Kalenders und unter Notizen ohne Bezug in der Bibliothek. Cues legst du direkt an der Übung an.</div><button class="btn primary wide" id="ns">Speichern</button>`);
+  openSheet(`<h3>Notiz</h3><textarea id="nt" placeholder="Was ist dir aufgefallen?"></textarea><div class="chips"><button class="chip sm" id="ntMerk" aria-pressed="false">Merksatz</button></div><div class="hint" id="ntHint">${NOTE_HINT}</div><button class="btn primary wide" id="ns">Speichern</button>`);
   // Fokus ins Textfeld: das Sheet dient nur dem Schreiben (spart einen Tipp)
   try{document.getElementById('nt').focus({preventScroll:true})}catch(e){}
-  document.getElementById('ns').onclick=()=>{const v=document.getElementById('nt').value.trim();if(!v)return;S.inbox.push({t:v,d:fmt(today)});D().notes.push({k:'Notiz',t:v,b:'Inbox'});closeSheet();toast('Gespeichert');render()};
+  // „Merksatz“ ist ein optionaler Schalter; mousedown abfangen, damit der Fokus (und die Tastatur) im Textfeld bleibt
+  const mk=document.getElementById('ntMerk'); mk.onmousedown=e=>e.preventDefault();
+  mk.onclick=()=>{const on=!mk.classList.contains('on');mk.classList.toggle('on',on);mk.setAttribute('aria-pressed',String(on));document.getElementById('ntHint').textContent=on?MERK_HINT:NOTE_HINT};
+  document.getElementById('ns').onclick=()=>{const v=document.getElementById('nt').value.trim();if(!v)return;
+    if(mk.classList.contains('on')){addMerksatz(v);closeSheet();toast('Merksatz gespeichert');render();return}
+    S.inbox.push({t:v,d:fmt(today)});D().notes.push({k:'Notiz',t:v,b:'Inbox'});closeSheet();toast('Gespeichert');render()};
 }
 function aktSheet(dateIso,preType){
   let type=preType&&TYPES[preType]?preType:'Tennis',dur=type==='Laufen'?60:type==='Kochen'?120:90,int='mittel',more=false; const dk=typeof dateIso==='string'?dateIso:iso(today);
@@ -2165,24 +2178,44 @@ function rtStart(it,after){
 }
 function rtAfter(it,after){const t=testOf(it.rt.test);if(!t)return;
   measureSheet(t,{title:'Nachher · '+testShort(t.n),hint:'Vorbelegt mit dem Wert von vorher.',initial:it.rt.vor,cb:val=>{it.rt.nach=val;closeSheet();after()}})}
-// Rettungskiste: Einträge in S.rettung ({id,t,a,x}); „hat geholfen“ merkt die id im Tag (d.helped) und schreibt ins Journal
+// Rettungskiste: Einträge in S.rettung ({id,t,a,x}); „hat geholfen“ merkt die id im Tag (d.helped) und schreibt ins Journal.
+// Merksatz (a:'Merksatz'): nur der Satz in t, Datum d (ISO) beim Anlegen; oben als eigene Gruppe, hervorgehoben, neueste zuerst
 const newRettId=()=>{let n=Date.now();while((S.rettung||[]).some(r=>r.id==='r'+n))n++;return 'r'+n};
+const RETT_ARTEN=['Übung','Cue','Notiz','Merksatz'];
+const merkDatum=k=>{const d=new Date(k+'T12:00:00');return isNaN(d)?'':fmt(d)+d.getFullYear()};
+function addMerksatz(t){S.rettung=S.rettung||[];S.rettung.push({id:newRettId(),t,a:'Merksatz',x:'',d:iso(today)});D().notes.push({k:'Merksatz',t,b:'Rettungskiste'});save()}
+// Formular mit Titel (input), Text (textarea) und Merksatz (textarea): bei Art Merksatz nur das Merksatz-Feld; beim Wechsel wandert vorhandener Text mit
+function rettArtFelder(chips,ti,tx,tm){
+  const set=a=>{const m=a==='Merksatz',T=document.getElementById(ti),X=document.getElementById(tx),M=document.getElementById(tm);
+    if(m&&!M.value.trim())M.value=[T.value.trim(),X.value.trim()].filter(Boolean).join('\n');
+    if(!m&&!T.value.trim()&&M.value.trim())T.value=M.value.trim();
+    T.style.display=X.style.display=m?'none':'';M.style.display=m?'':'none'};
+  document.querySelectorAll(`#${chips} .chip`).forEach(c=>c.onclick=()=>{document.querySelectorAll(`#${chips} .chip`).forEach(x=>x.classList.remove('on'));c.classList.add('on');set(c.dataset.a)});
+  const on=document.querySelector(`#${chips} .chip.on`); if(on)set(on.dataset.a);
+}
 function rettSheet(){
   const d=D(); const R=S.rettung=S.rettung||[]; const hp=id=>(d.helped||[]).includes(id);
-  openSheet(`<h3>Rettungskiste</h3><div class="hint">Was an schlechten Tagen geholfen hat. Kein Übungsbezug nötig. Tipp auf einen Eintrag ändert ihn.</div><div class="list" id="rettList">${R.map(r=>`<div class="item"><span class="badge">${esc(r.a)}</span><button class="t" style="text-align:left" data-redit="${esc(r.id)}"><b>${esc(r.t)}</b><small>${esc(r.x||'')}</small>${hp(r.id)?'<small style="color:var(--accent)">✓ heute geholfen</small>':''}</button><button class="chip sm" data-h="${esc(r.id)}">hat geholfen</button></div>`).join('')||'<div class="hint" id="rettEmpty">Noch kein Eintrag. Lege unten an, was an schlechten Tagen hilft.</div>'}</div>
-  <div class="lbl">Neuer Eintrag</div><input type="text" id="rt" placeholder="Titel"><div class="chips" id="ra">${['Übung','Cue','Notiz'].map((a,j)=>`<button class="chip sm ${j===1?'on':''}" data-a="${a}">${a}</button>`).join('')}</div><textarea id="rx" placeholder="Was genau hilft?"></textarea><button class="btn ghost wide" id="rs">Eintrag speichern</button>`);
+  const M=R.filter(r=>r.a==='Merksatz').sort((a,b)=>(b.d||'').localeCompare(a.d||'')), E=R.filter(r=>r.a!=='Merksatz');
+  const merk=M.map(r=>`<div class="merk"><button class="mt" data-redit="${esc(r.id)}">${esc(r.t)}</button><div class="mf"><span class="md">${r.d?merkDatum(r.d):''}${hp(r.id)?' · <span style="color:var(--accent)">✓ heute geholfen</span>':''}</span><button class="chip sm" data-h="${esc(r.id)}">hat geholfen</button></div></div>`).join('');
+  const list=E.map(r=>`<div class="item"><span class="badge">${esc(r.a)}</span><button class="t" style="text-align:left" data-redit="${esc(r.id)}"><b>${esc(r.t)}</b><small>${esc(r.x||'')}</small>${hp(r.id)?'<small style="color:var(--accent)">✓ heute geholfen</small>':''}</button><button class="chip sm" data-h="${esc(r.id)}">hat geholfen</button></div>`).join('');
+  openSheet(`<h3>Rettungskiste</h3><div class="hint">Was an schlechten Tagen geholfen hat. Kein Übungsbezug nötig. Tipp auf einen Eintrag ändert ihn.</div>${M.length?`<div class="lbl">Merksätze</div><div id="merkList">${merk}</div>`:''}${M.length&&E.length?'<div class="lbl">Weitere Einträge</div>':''}${E.length||!M.length?`<div class="list" id="rettList">${list||'<div class="hint" id="rettEmpty">Noch kein Eintrag. Lege unten an, was an schlechten Tagen hilft.</div>'}</div>`:''}
+  <div class="lbl">Neuer Eintrag</div><input type="text" id="rt" placeholder="Titel"><div class="chips" id="ra">${RETT_ARTEN.map((a,j)=>`<button class="chip sm ${j===1?'on':''}" data-a="${a}">${a}</button>`).join('')}</div><textarea id="rm" placeholder="Merksatz"></textarea><textarea id="rx" placeholder="Was genau hilft?"></textarea><button class="btn ghost wide" id="rs">Eintrag speichern</button>`);
   document.querySelectorAll('#sheet [data-h]').forEach(b=>b.onclick=()=>{const id=b.dataset.h;const r=R.find(x=>x.id===id);if(!r)return;d.helped=(d.helped||[]).filter(x=>typeof x==='string');if(!d.helped.includes(id)){d.helped.push(id);d.notes.push({k:'Rettung',t:r.t+' hat geholfen',b:'Rettungskiste'})}save();toast('Im Tag notiert');rettSheet()});
   document.querySelectorAll('#sheet [data-redit]').forEach(b=>b.onclick=()=>rettEditSheet(b.dataset.redit));
-  document.querySelectorAll('#ra .chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('#ra .chip').forEach(x=>x.classList.remove('on'));c.classList.add('on')});
-  document.getElementById('rs').onclick=()=>{const t=document.getElementById('rt').value.trim();if(!t){toast('Titel fehlt');return}R.push({id:newRettId(),t,a:document.querySelector('#ra .chip.on').dataset.a,x:document.getElementById('rx').value.trim()});save();toast('Eintrag gespeichert');rettSheet()};
+  rettArtFelder('ra','rt','rx','rm');
+  document.getElementById('rs').onclick=()=>{const a=document.querySelector('#ra .chip.on').dataset.a;
+    if(a==='Merksatz'){const t=document.getElementById('rm').value.trim();if(!t){toast('Merksatz fehlt');return}addMerksatz(t);toast('Merksatz gespeichert');rettSheet();return}
+    const t=document.getElementById('rt').value.trim();if(!t){toast('Titel fehlt');return}R.push({id:newRettId(),t,a,x:document.getElementById('rx').value.trim()});save();toast('Eintrag gespeichert');rettSheet()};
 }
 function rettEditSheet(id){
-  const r=(S.rettung||[]).find(x=>x.id===id); if(!r)return;
-  openSheet(`<h3>Eintrag ändern</h3><input type="text" id="ret" placeholder="Titel" value="${esc(r.t)}"><div class="chips" id="rea">${['Übung','Cue','Notiz'].map(a=>`<button class="chip sm ${r.a===a?'on':''}" data-a="${a}">${a}</button>`).join('')}</div><textarea id="rex" placeholder="Was genau hilft?">${esc(r.x||'')}</textarea>
+  const r=(S.rettung||[]).find(x=>x.id===id); if(!r)return; const m0=r.a==='Merksatz';
+  openSheet(`<h3>Eintrag ändern</h3><input type="text" id="ret" placeholder="Titel" value="${m0?'':esc(r.t)}"><div class="chips" id="rea">${RETT_ARTEN.map(a=>`<button class="chip sm ${r.a===a?'on':''}" data-a="${a}">${a}</button>`).join('')}</div><textarea id="rem" placeholder="Merksatz">${m0?esc(r.t):''}</textarea><textarea id="rex" placeholder="Was genau hilft?">${esc(r.x||'')}</textarea>${m0&&r.d?`<div class="hint">Angelegt am ${merkDatum(r.d)}</div>`:''}
     <div class="row"><button class="btn primary" style="flex:1" id="reSave">Speichern</button><button class="btn danger" id="reDel">Löschen</button></div>`);
-  document.querySelectorAll('#rea .chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('#rea .chip').forEach(x=>x.classList.remove('on'));c.classList.add('on')});
-  document.getElementById('reSave').onclick=()=>{const t=document.getElementById('ret').value.trim();if(!t){toast('Titel fehlt');return}
-    const on=document.querySelector('#rea .chip.on');r.t=t;r.a=on?on.dataset.a:r.a;r.x=document.getElementById('rex').value.trim();save();toast('Eintrag gespeichert');rettSheet()};
+  rettArtFelder('rea','ret','rex','rem');
+  document.getElementById('reSave').onclick=()=>{const on=document.querySelector('#rea .chip.on');const a=on?on.dataset.a:r.a;
+    if(a==='Merksatz'){const t=document.getElementById('rem').value.trim();if(!t){toast('Merksatz fehlt');return}r.t=t;r.a=a;r.x='';if(!r.d)r.d=iso(today);save();toast('Eintrag gespeichert');rettSheet();return}
+    const t=document.getElementById('ret').value.trim();if(!t){toast('Titel fehlt');return}
+    r.t=t;r.a=a;r.x=document.getElementById('rex').value.trim();save();toast('Eintrag gespeichert');rettSheet()};
   document.getElementById('reDel').onclick=()=>confirmSheet('Eintrag „'+esc(r.t)+'“ löschen?',()=>{S.rettung=S.rettung.filter(x=>x!==r);save();toast('Eintrag gelöscht');rettSheet()},'Löschen','<div class="hint">Frühere Journal-Einträge „hat geholfen“ bleiben erhalten.</div>');
 }
 
