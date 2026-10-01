@@ -302,6 +302,14 @@
   .exsec-h .tog{text-transform:none;letter-spacing:0;font-size:13px}
   .exsec.ziel{border-top:0;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px}
   .exsec.ziel .exsec-h>span{color:var(--accent)}
+  /* Notizen der Übung im Training, unter den Cues: höchstens 4 sichtbar (trNotesFit), Rest im eigenen Scrollbereich */
+  .trnotes{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+  .trn-h{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:2px}
+  .trn-l{position:relative;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .trn-l.more{box-shadow:inset 0 -10px 8px -8px var(--line)}
+  .trn{font-size:13px;line-height:1.35;padding:4px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+  .trn:last-child{border-bottom:0}
+  .trn .nd{color:var(--ink2);font-weight:600;margin-right:4px;white-space:nowrap}
   /* Merksätze in der Rettungskiste: groß lesbar, Akzentstreifen, Datum darunter */
   .merk{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:0 0 8px}
   .merk .mt{display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;font-size:17px;line-height:1.4;font-weight:500;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer}
@@ -499,7 +507,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.10';
+const APP_VERSION='1.0.11';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -792,9 +800,15 @@ function render(){
   document.getElementById('subtitle').textContent=`${wd(today)}, ${fmt(today)}${today.getFullYear()}`;
   vidCheck(); const vk=vidKeep();
   ({heute:rHeute,training:rTraining,bib:rBib,kal:rKal})[S.tab]();
-  vidPlace(vk); vidThumbs();
+  vidPlace(vk); vidThumbs(); trNotesFit();
   save();
 }
+// Notizen im Training: Liste endet nach der 4. Notiz (Zeilen können umbrechen, darum gemessen, mit Bruchteilen von Pixeln), Rest per Wischen; Scrollstand bleibt beim Neuzeichnen
+const TRN_SCROLL={};
+function trNotesFit(){document.querySelectorAll('.trn-l').forEach(l=>{const c=l.children;l.style.maxHeight='';
+  const mehr=c.length>4; l.classList.toggle('more',mehr); if(!mehr)return;
+  l.scrollTop=0; l.style.maxHeight=(c[3].getBoundingClientRect().bottom-l.getBoundingClientRect().top)+'px';
+  l.scrollTop=TRN_SCROLL[l.dataset.trn]||0; l.onscroll=()=>{TRN_SCROLL[l.dataset.trn]=l.scrollTop}})}
 
 // ---------- Heute ----------
 function scale(cur,onSel,small){return `<div class="scale">${[...Array(11).keys()].map(v=>`<button class="${v===cur?'on '+cls(v):''}" data-v="${v}">${v}</button>`).join('')}</div>`}
@@ -1046,6 +1060,10 @@ function rTraining(){
     document.querySelectorAll('[data-aedit]').forEach(b=>b.onclick=()=>aktEditSheet(tk,+b.dataset.aedit));
     return;
   }
+  const curEntry=(i=>i>=0?S.days[s.date].done[i]:null)(S.days[s.date]?findEntry(s.date,s.block):-1);
+  // Notizen der Übung unter den Cues (nur offene Übung, nur lesen): höchstens 4 sichtbar, weitere im eigenen Scrollbereich (trNotesFit)
+  const trNotes=e=>{const all=exNoteList(e.id,curEntry);if(!all.length)return '';
+    return `<div class="trnotes"><div class="trn-h">Notizen${all.length>4?` · ${all.length}`:''}</div><div class="trn-l" data-trn="${e.id}">${all.map(o=>`<div class="trn"><span class="nd">${dfmt(o.d)}</span> ${esc(o.t)}${o.i==null?' <span class="badge">Einheit</span>':''}</div>`).join('')}</div></div>`};
   const rows=s.items.map((it,idx)=>{const e=exById(it.id);
     // Zugeklappt nur die Anzahl eigener Cues; aufgeklappt eigene und Prinzip-Cues vollständig im Kasten
     const nc=e.cues.length, cnt=it.open?'':`<span class="cuecnt"> · ${nc?nc+(nc===1?' Cue':' Cues'):'keine Cues'}</span>`;
@@ -1053,7 +1071,7 @@ function rTraining(){
     return `<div class="ex ${it.r?'done':''} ${it.skip?'skipped':''} ${it.open?'open':''}" data-i="${idx}"><span class="swhint l">überspringen</span><span class="swhint r">doch machen</span>
       <div class="head"><div class="name"><button class="nm" data-tog="${idx}"><b>${esc(e.name)}${it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b></button><small><button class="chip sm dose ${it.d&&!sameDose(it.d,e.d)?'dev':''}" data-dose="${idx}">${doseStr(it.d||e.d)}${it.d&&!sameDose(it.d,e.d)?' · geändert':''} ✎</button>${e.side==='getrennt'?`<span class="sidet"> · ${it.side==='L'?'nur links':it.side==='R'?'nur rechts':'beide Seiten'}</span>`:''}${cnt}${!it.open&&it.rt&&it.rt.nach?'<span style="color:var(--ink2)"> · Retest</span>':''}${it.skip?' · übersprungen':''}</small></div>
         <div class="rate"><button data-r="1" class="${it.r?'on':''}" title="gemacht" aria-pressed="${!!it.r}">✓</button><button data-pain class="pain ${it.pain?'on':''}" title="Problem oder Schmerz" aria-pressed="${!!it.pain}">!</button></div></div>
-      <div class="body">${it.open?videoBox(e,'tr'):''}${box}
+      <div class="body">${it.open?videoBox(e,'tr'):''}${box}${it.open?trNotes(e):''}
         ${!it.rt?'':`<div class="rtline"><span>${esc(testShort(it.rt.test))} · ${rtText(it.rt)}</span>${it.rt.nach?`<button class="chip sm" data-rtdel="${idx}">ändern</button>`:`<button class="chip sm" data-rtnach="${idx}">danach messen</button>`}</div>`}
         <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}${timerOn(it)?`<button class="tmr" data-timerstop="${idx}" aria-label="Timer stoppen">⏱ ${fmtSec(timerLeft())}</button>`:`<button data-timer="${idx}">Timer</button>`}<button data-notetog="${idx}" aria-pressed="${!!(it.noteOpen||it.note||it.pain)}">Notiz</button><button data-more="${idx}" aria-label="Mehr: + Cue, überspringen">⋯</button></div>
         ${it.noteOpen||it.note||it.pain?`<input type="text" placeholder="${it.pain?'Was war? z. B. Ziehen rechts, Fuß gerutscht':'Kurznotiz, z. B. nur rechts super'}" value="${esc(it.note||'')}" data-note="${idx}">`:''}
@@ -1561,6 +1579,11 @@ function blockSheet(id,after){
 }
 const sideLbl=sd=>sd==='L'?' · nur links':sd==='R'?' · nur rechts':sd==='beide'?' · L/R':'';
 const dfmt=k=>fmt(new Date(k+'T12:00:00'));
+// Notizen einer Übung: datierte Notizen (S.exNotes, i = Index) und Kurznotizen aus Einheiten, neueste oben.
+// skip: Eintrag der laufenden Einheit, deren Kurznotiz im Training schon im Eingabefeld steht
+const exNoteList=(id,skip)=>{const ns=(S.exNotes||{})[id]||[];
+  const un=[];Object.keys(S.days).forEach(k=>(S.days[k].done||[]).forEach(a=>{if(a===skip)return;(a.ex||[]).forEach(i=>{if(i.id===id&&i.note)un.push({d:k,t:i.note})})}));
+  return [...ns.map((n,i)=>({d:n.d,t:n.t,i})),...un].sort((a,b)=>b.d.localeCompare(a.d)||(a.i==null)-(b.i==null)||(b.i??0)-(a.i??0))};
 const daysBetween=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);
 
 // ---------- Bibliothek ----------
@@ -1589,9 +1612,7 @@ function rBib(){
     return `<div class="exdone"><span class="ftl">${m==='p'?'Probleme am':'gemacht am'}${all.length>ks.length?' · die letzten '+ks.length:''}</span><div class="chips">${ks.map(k=>`<button class="chip sm" data-exday="${k}">${dfmt(k)}</button>`).join('')}</div></div>`};
   const bilKachel=(e,m,n,l)=>{const an=BILMODE[e.id]===m, leer=!bilTage(e,m).length;return `<button class="bil" data-bil="${e.id}:${m}" aria-pressed="${an&&!leer}"${leer?' disabled':''}><b>${n}</b><small>${l}</small></button>`};
   // datierte Notizen je Übung (S.exNotes) und Kurznotizen aus Einheiten, gemeinsam neueste oben; Tipp auf eine eigene Notiz öffnet Bearbeiten/Löschen, Kurznotizen nur Anzeige
-  const notesRow=e=>{const ns=(S.exNotes||{})[e.id]||[];
-    const un=[];Object.keys(S.days).forEach(k=>(S.days[k].done||[]).forEach(a=>(a.ex||[]).forEach(i=>{if(i.id===e.id&&i.note)un.push({d:k,t:i.note})})));
-    const all=[...ns.map((n,i)=>({d:n.d,t:n.t,i})),...un].sort((a,b)=>b.d.localeCompare(a.d)||(a.i==null)-(b.i==null)||(b.i??0)-(a.i??0));
+  const notesRow=e=>{const all=exNoteList(e.id);
     return `<div class="nrow exsec"><span class="ftl">Notizen</span>${all.length?`<div class="rts">${all.map(o=>o.i!=null?`<button class="nl" data-exnote="${e.id}:${o.i}"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)}</button>`:`<div class="nl"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)} <span class="badge">Einheit</span></div>`).join('')}</div>`:''}`
       +`<div class="chips"><button class="chip sm" data-addnote="${e.id}">+ Notiz</button></div></div>`};
   // „Soll verbessern“: Tests der Übung mit Ziel und letztem Wert, oben auf der Karte; „ändern“ öffnet die Auswahl wie im Plan
