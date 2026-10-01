@@ -428,7 +428,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.2';
+const APP_VERSION='1.0.3';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -2034,10 +2034,15 @@ function importFile(file){
     const nEx=exSeed().filter(e=>!(dt.exDeleted||[]).includes(e.id)).length+(dt.customEx||[]).length;
     const nEinh=days.reduce((n,d)=>n+((d&&d.done)||[]).filter(a=>a&&a.ex).length,0);
     const fremd=obj.kanal&&obj.kanal!==KANAL;
+    // Beispieldaten dürfen nie in die echte App: eine Datei aus dem Testkanal wird im echten Kanal abgelehnt (Entscheidung 01.10.2026).
+    // Umgekehrt bleibt erlaubt: eine echte Datei in den Testkanal, um eine neue Version mit eigenen Daten auszuprobieren.
+    const gesperrt=!TEST&&obj.kanal==='test';
     openSheet(`<h3>Import</h3><div class="impbox"><span>Datei: <b>${esc(file.name)}</b></span><span>Exportiert am ${esc(dateDE(obj.exportiert))} · Version ${esc(obj.version||'–')} · Kanal ${esc(obj.kanal||'–')}</span><span><b>${nTage}</b> Tage mit Einträgen · <b>${nEx}</b> Übungen · <b>${nEinh}</b> Einheiten</span></div>
-      ${fremd?`<div class="warn">Die Datei stammt aus dem Kanal „${esc(obj.kanal)}“, geöffnet ist „${esc(KANAL)}“.</div>`:''}
+      ${gesperrt?`<div class="warn" id="impBlock">Datei aus MF-Log Test mit Beispieldaten. In MF-Log lässt sie sich nicht importieren, damit keine Beispieldaten zu deinen echten Daten kommen. Importiere hier nur Dateien, die du in MF-Log exportiert hast.</div>`
+      :`${fremd?`<div class="warn">Die Datei stammt aus dem Kanal „${esc(obj.kanal)}“, geöffnet ist „${esc(KANAL)}“.</div>`:''}
       <div class="hint">„Ersetzen“ löscht den jetzigen Stand in ${esc(APP_NAME)} und übernimmt die Datei. Vorher exportieren, wenn du den jetzigen Stand behalten willst.</div>
-      <div class="row"><button class="btn primary" style="flex:1" id="impYes">Ersetzen</button></div>`);
+      <div class="row"><button class="btn primary" style="flex:1" id="impYes">Ersetzen</button></div>`}`);
+    if(gesperrt)return;
     document.getElementById('impYes').onclick=()=>{const alt=JSON.stringify(S);
       try{hydrate(JSON.parse(JSON.stringify(dt)));S.tab='heute';S.session=null;S.sessShow=false;stopTimer();save();closeSheet();applyTheme();setTab('heute');toast('Import übernommen')}
       catch(e){hydrate(JSON.parse(alt));closeSheet();render();toast('Import fehlgeschlagen, alter Stand bleibt')}}};
