@@ -348,6 +348,13 @@
   .bilanz div{background:var(--surface2);border-radius:8px;padding:6px 2px}
   .bilanz b{display:block;font-family:"IBM Plex Mono",monospace;font-size:15px}
   .bilanz small{font-size:11px;color:var(--ink2)}
+  /* Durchführung: Kacheln „gemacht“ und „Probleme“ sind Schalter für die Tagesliste darunter (standardmäßig zu) */
+  button.bil{display:block;width:100%;background:var(--surface2);border-radius:8px;padding:6px 2px;text-align:center;border:2px solid transparent}
+  button.bil small::after{content:' ▸'}
+  button.bil[aria-pressed="true"]{border-color:var(--accent)}
+  button.bil[aria-pressed="true"] small::after{content:' ▾'}
+  button.bil:disabled{opacity:.6;cursor:default}
+  button.bil:disabled small::after{content:''}
   .daynav{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:nowrap}
   .daynav h3{flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .daynav .chip{flex:0 0 auto;white-space:nowrap}
@@ -452,7 +459,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.6';
+const APP_VERSION='1.0.7';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -1236,6 +1243,8 @@ function sortable(list,onMove){
   });
 }
 let NEX_MORE=false;
+// Durchführung auf der Übungskarte: welche Tagesliste offen ist (je Übung 'g' gemacht, 'p' Probleme), nur für diese Sitzung
+let BILMODE={};
 const tagChips=(sel,attr)=>`<div class="chips tagchips">${Object.keys(PRINZIP).map(t=>`<button class="chip sm ${sel.includes(t)?'on':''}" ${attr}="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(t)}</button>`).join('')}</div>`;
 function newExerciseSheet(cb){
   let cat='K',side='beidseitig',u='Wdh',nm='',region='',video='',tags=[],status='testphase';
@@ -1481,9 +1490,11 @@ function rBib(){
   // Test-Retest: letzte 8 Paare, chronologisch; Tipp öffnet den Tag
   const rtRow=e=>{const ps=rtPairs(e.id).slice(-8);if(!ps.length)return '';
     return `<div class="rtrow exsec"><span class="ftl">Test-Retest</span><div class="rts">${ps.map(o=>`<button class="rtl" data-rtday="${o.k}">${dfmt(o.k)} · ${esc(testShort(o.rt.test))} · ${rtShort(o.rt)}</button>`).join('')}</div></div>`};
-  // „gemacht am“: letzte 8 Tage, an denen die Übung abgehakt und nicht übersprungen wurde, älteste links; nur Navigation, keine Werte
-  const doneRow=e=>{const ks=Object.keys(S.days).filter(k=>(S.days[k].done||[]).some(a=>(a.ex||[]).some(i=>i.id===e.id&&i.r&&!i.skip))).sort().slice(-8);if(!ks.length)return '';
-    return `<div class="exdone"><span class="ftl">gemacht am</span><div class="chips">${ks.map(k=>`<button class="chip sm" data-exday="${k}">${dfmt(k)}</button>`).join('')}</div></div>`};
+  // Tage zur Kachel „gemacht“ (abgehakt, nicht übersprungen) bzw. „Probleme“ (mit „!“), älteste links; nur Navigation, keine Werte
+  const bilTage=(e,m)=>Object.keys(S.days).filter(k=>(S.days[k].done||[]).some(a=>(a.ex||[]).some(i=>i.id===e.id&&i.r&&!i.skip&&(m!=='p'||i.pain)))).sort();
+  const doneRow=(e,m)=>{const all=bilTage(e,m);if(!all.length)return '';const ks=all.slice(-20);
+    return `<div class="exdone"><span class="ftl">${m==='p'?'Probleme am':'gemacht am'}${all.length>ks.length?' · die letzten '+ks.length:''}</span><div class="chips">${ks.map(k=>`<button class="chip sm" data-exday="${k}">${dfmt(k)}</button>`).join('')}</div></div>`};
+  const bilKachel=(e,m,n,l)=>{const an=BILMODE[e.id]===m, leer=!bilTage(e,m).length;return `<button class="bil" data-bil="${e.id}:${m}" aria-pressed="${an&&!leer}"${leer?' disabled':''}><b>${n}</b><small>${l}</small></button>`};
   // datierte Notizen je Übung (S.exNotes) und Kurznotizen aus Einheiten, gemeinsam neueste oben; Tipp auf eine eigene Notiz öffnet Bearbeiten/Löschen, Kurznotizen nur Anzeige
   const notesRow=e=>{const ns=(S.exNotes||{})[e.id]||[];
     const un=[];Object.keys(S.days).forEach(k=>(S.days[k].done||[]).forEach(a=>(a.ex||[]).forEach(i=>{if(i.id===e.id&&i.note)un.push({d:k,t:i.note})})));
@@ -1501,8 +1512,8 @@ function rBib(){
   main.innerHTML=nav+inb+(leer?'':`<input type="text" id="q" placeholder="Suchen, auch Spitznamen"><div class="chips">${[['alle','Alle'],['K','Korrektiv'],['I','Intensiv'],['test','Testphase'],['geparkt','Geparkt']].map(([k,l])=>`<button class="chip sm ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}</div>`)+`
   <section class="card"><div class="list" id="exl">${leer?'<div class="hint" id="exEmpty">Noch keine Übungen. Lege die erste mit „+ Neue Übung“ an.</div>':items.length?'':'<div class="hint">Keine Übung in diesem Filter.</div>'}${items.map(e=>{const st=exStatus(e);const b=bilanz(e);const pb=planBlocksOf(e.id);const ip=pb.length>0;return `<div class="ex ${S.openEx===e.id?'open':''}"><div class="head"><button class="name" data-open="${e.id}"><b>${esc(e.name)} <span class="act ${e.cat}">${e.cat}</span> ${ip?`<span class="badge">im Plan · ${esc(pb.map(x=>x.name).join(', '))}</span>`:''} ${st!=='aktiv'?`<span class="badge ${st==='testphase'?'test':st}">${st}</span>`:''}</b><small>${[esc(e.region||''),doseStr(e.d)].filter(Boolean).join(' · ')}${e.side==='getrennt'?' · L/R':''}</small>${zielChips(e)}</button></div>
     <div class="body">${zielSec(e)}
-    <div class="exsec"><span class="ftl">Durchführung</span><div class="bilanz"><div><b>${b.n}</b><small>gemacht</small></div><div><b>${b.p}</b><small>Probleme</small></div></div>
-    ${S.openEx===e.id?doneRow(e):''}
+    <div class="exsec"><span class="ftl">Durchführung</span><div class="bilanz">${bilKachel(e,'g',b.n,'gemacht')}${bilKachel(e,'p',b.p,'Probleme')}</div>
+    ${S.openEx===e.id&&BILMODE[e.id]?doneRow(e,BILMODE[e.id]):''}
     ${e.first?`<div class="hint">erstmals am ${e.first}</div>`:''}</div>
     ${S.openEx===e.id?rtRow(e)+notesRow(e):''}
     <div class="exsec"><span class="ftl">Cues</span>
@@ -1522,6 +1533,8 @@ function rBib(){
   document.getElementById('newExBib').onclick=()=>newExerciseSheet(id=>{S.openEx=id;S.bibFilter='alle';render();const c=document.querySelector('#exl .ex.open');if(c)c.scrollIntoView({block:'nearest'})});
   document.querySelectorAll('[data-exedit]').forEach(b=>b.onclick=()=>exEditSheet(exById(b.dataset.exedit)));
   document.querySelectorAll('[data-exziel]').forEach(b=>b.onclick=()=>exTestsSheet(exById(b.dataset.exziel),()=>{closeSheet();render()}));
+  // Kachel antippen klappt die Tage auf, erneut antippen wieder zu; nur eine Liste je Übung
+  document.querySelectorAll('[data-bil]').forEach(b=>b.onclick=()=>{const [id,m]=b.dataset.bil.split(':');BILMODE[id]=BILMODE[id]===m?null:m;render()});
   document.querySelectorAll('[data-exvideo]').forEach(b=>b.onclick=()=>openVideo((exById(b.dataset.exvideo)||{}).video));
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.openEx=S.openEx===b.dataset.open?null:b.dataset.open;render()});
   document.querySelectorAll('[data-rtday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.rtday));
