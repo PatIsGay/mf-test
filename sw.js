@@ -1,6 +1,6 @@
 // Service Worker für MF-Log (beide Kanäle; dieselbe Datei liegt unter ./ und ./test/).
 // VERSION muss APP_VERSION in index.html entsprechen (prüft app/build.js).
-const VERSION='1.0.14';
+const VERSION='1.0.15';
 const SCOPE_PATH=new URL(self.registration.scope).pathname;
 // Kanal aus dem Geltungsbereich: …/mf-test/ (veröffentlicht) oder …/test/ (lokal) = Testkanal. Getrennte Cache-Namen, weil beide Kanäle denselben CacheStorage der Herkunft teilen.
 const KANAL=/\/(mf-)?test\/$/.test(SCOPE_PATH)?'test':'app';

@@ -302,6 +302,7 @@
   .exsec-h .tog{text-transform:none;letter-spacing:0;font-size:13px}
   .exsec.ziel{border-top:0;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px}
   .exsec.ziel .exsec-h>span{color:var(--accent)}
+  .exsec.ziel .zps{font-size:12px;font-weight:400;color:var(--ink2)}
   /* Notizen zur Übung (Karte und Training unter den Cues): höchstens 6 sichtbar (notesFit), Rest im eigenen Scrollbereich; Tipp ändert */
   .trnotes{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
   .trn-h{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:2px}
@@ -511,7 +512,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.14';
+const APP_VERSION='1.0.15';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -1651,9 +1652,14 @@ function rBib(){
   // „Soll verbessern“: Tests der Übung mit Ziel und letztem Wert, oben auf der Karte; „ändern“ öffnet die Auswahl wie im Plan
   const zielSec=e=>{const ts=exTests(e.id);
     return `<div class="exsec ziel"><div class="exsec-h"><span>Soll verbessern</span><button class="tog" data-exziel="${e.id}">${ts.length?'ändern':'wählen'}</button></div>`
-      +(ts.length?ts.map((t,i)=>{const z=zielOf(t);return `<div class="zrow"><b>${esc(goalName(t))}</b>${i===0&&ts.length>1?' <span class="badge">primär</span>':''}<div class="zw">${z?nw('Ziel '+goalVal(z.test,z.target))+' · ':''}${nw(goalLast(t))}</div></div>`}).join(''):'<div class="zleer">Noch nichts gewählt.</div>')+`</div>`};
+      +(ts.length?ts.map((t,i)=>{const pr=i===0&&ts.length>1?' <span class="badge">primär</span>':'';
+        if(!SEITE_FOLGT.includes(t.side)){const z=zielOf(t);return `<div class="zrow"><b>${esc(goalName(t))}</b>${pr}<div class="zw">${z?nw('Ziel '+goalVal(z.test,z.target))+' · ':''}${nw(goalLast(t))}</div></div>`}
+        // Seite folgt der Ausführung bzw. beide: je ermittelter Seite eine Zeile mit Ziel und zuletzt
+        const ps=planSides(e.id),ss=intentSides(t,ps);
+        return `<div class="zrow"><b>${esc(goalName(t))}</b>${pr}${t.side!=='b'?` <span class="zps">(${planSideLbl(ps)})</span>`:''}`
+          +ss.map(x=>{const k={test:t.test,side:x},z=zielOf(k);return `<div class="zw">${x==='l'?'links':'rechts'}: ${z?nw('Ziel '+goalVal(z.test,z.target))+' · ':''}${nw(goalLast(k))}</div>`}).join('')+`</div>`}).join(''):'<div class="zleer">Noch nichts gewählt.</div>')+`</div>`};
   // zugeklappt: Ziel-Kästchen unter dem Namen (aufgeklappt zeigt der Abschnitt die Einzelheiten, nichts doppelt)
-  const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${ts.map(t=>`<span class="zchip">${esc(goalName(t))}</span>`).join('')}</span>`:''};
+  const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${ts.map(t=>`<span class="zchip">${esc(SEITE_FOLGT.includes(t.side)?sideName(t.test,intentSides(t,planSides(e.id))):goalName(t))}</span>`).join('')}</span>`:''};
   // leere Bibliothek (echter Kanal beim Start): nur Hinweis und „+ Neue Übung“, ohne Suche und Filter
   const leer=!EX.length;
   main.innerHTML=nav+inb+(leer?'':`<input type="text" id="q" placeholder="Suchen, auch Spitznamen"><div class="chips">${[['alle','Alle'],['K','Korrektiv'],['I','Intensiv'],['test','Testphase'],['geparkt','Geparkt']].map(([k,l])=>`<button class="chip sm ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}</div>`)+`
@@ -1711,7 +1717,7 @@ function openBibSheet(kind,keep){
   const T={plan:'Plan',tests:'Tests',verlauf:'Verlauf'}[kind];
   let html='';
   if(kind==='plan'){
-    const block=b=>`<section class="card"><div class="row between" style="margin-bottom:8px"><button class="blockhead" data-bedit="${b.id}">${esc(b.name)}<span class="pen">ändern</span></button><span class="act ${b.type}">${TYPES[b.type].l}</span></div><div class="list" data-sortblock="${b.id}">${b.items.map(([id,,sd])=>{const e=exById(id);return `<div class="item sortrow">${b.items.length>1?DRAGH:''}<div class="t"><b>${esc(e.name)}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small><button class="dchip" data-pdose="${b.id}:${id}">${doseStr(e.d)}</button>${sideLbl(sd)||(e.side==='getrennt'?' · L/R':'')}</small><button class="goalline${exTests(id).length?'':' none'}" data-extests="${id}">${exTestsLine(e)}</button></div><button class="chip sm" data-swap="${b.id}:${id}">tauschen</button><button class="chip sm" data-rm="${b.id}:${id}">−</button></div>`}).join('')||'<div class="hint">leer</div>'}</div><button class="btn ghost wide" style="margin-top:8px" data-add="${b.id}">+ Übung in Block</button></section>`;
+    const block=b=>`<section class="card"><div class="row between" style="margin-bottom:8px"><button class="blockhead" data-bedit="${b.id}">${esc(b.name)}<span class="pen">ändern</span></button><span class="act ${b.type}">${TYPES[b.type].l}</span></div><div class="list" data-sortblock="${b.id}">${b.items.map(([id,,sd])=>{const e=exById(id);return `<div class="item sortrow">${b.items.length>1?DRAGH:''}<div class="t"><b>${esc(e.name)}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small><button class="dchip" data-pdose="${b.id}:${id}">${doseStr(e.d)}</button>${sideLbl(sd)||(e.side==='getrennt'?' · L/R':'')}</small><button class="goalline${exTests(id).length?'':' none'}" data-extests="${id}">${exTestsLine(e,sd)}</button></div><button class="chip sm" data-swap="${b.id}:${id}">tauschen</button><button class="chip sm" data-rm="${b.id}:${id}">−</button></div>`}).join('')||'<div class="hint">leer</div>'}</div><button class="btn ghost wide" style="margin-top:8px" data-add="${b.id}">+ Übung in Block</button></section>`;
     html=`<section class="card"><div class="row between"><div><h2 style="margin:0">Plan v${cur.v} · seit ${dfmt(cur.from)} · ${daysBetween(cur.from,iso(today))} Tage</h2><small class="hint">${(s=>s.sess?`${s.full} von ${s.sess} Einheit${s.sess===1?'':'en'} vollständig`:'noch keine Einheit')(stats([...Array(Math.max(daysBetween(cur.from,iso(today)),1)).keys()].map(i=>addD(new Date(cur.from+'T12:00:00'),i))))}</small></div><button class="chip sm" id="toVerlauf">Verlauf ›</button></div><div class="lbl" style="margin-top:8px">Ziele</div><div class="list">${P().ziele.map(z=>`<button class="item goal" data-goal="${z.id}"><span class="t">${goalHtml(z)}</span><span class="go">›</span></button>`).join('')||'<div class="hint">Noch kein Ziel.</div>'}</div><button class="btn ghost wide" style="margin-top:6px" id="goalAdd">+ Ziel</button></section>
     <section class="card" id="rasterCard"><div class="row between" style="margin-bottom:10px;flex-wrap:nowrap"><h2 style="margin:0">Wochenraster</h2>${qBtn('raster')}</div><div class="raster">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(w=>`<div class="d ${wd(today)===w?'today':''}" data-w="${w}">${w}${(p.raster[w]||[]).map(t=>{const bb=blockById(t);return bb?`<span class="bsw ${bb.type}" title="${esc(bb.name)}">${esc(shortN(bb.name))}</span>`:`<span class="sw ${t}" title="${TYPES[t]?TYPES[t].l:t}"></span>`}).join('')||'<span class="sw" style="background:transparent"></span>'}</div>`).join('')}</div>
     <div class="legend" style="margin-top:8px"><span><i style="background:var(--k)"></i>Korrektiv</span><span><i style="background:var(--i)"></i>Intensiv</span><span><i style="background:var(--tennis)"></i>Tennis</span><span><i style="background:var(--laufen)"></i>Laufen</span><span><i style="background:var(--pause)"></i>Pause</span></div>
@@ -2077,7 +2083,7 @@ const testOf=n=>TESTS.find(t=>t.n===n);
 const testSingle=n=>!!(testOf(n)||{}).single;
 // Testname kurz: Klammerkürzel („Gestrecktes Beinheben (SLR)“ → „SLR“), sonst der Name
 const testShort=n=>{const m=String(n).match(/\(([^)]+)\)\s*$/);return m?m[1]:n};
-const goalName=z=>testShort(z.test)+(z.side==='l'?' links':z.side==='r'?' rechts':'');
+const goalName=z=>testShort(z.test)+(z.side==='l'?' links':z.side==='r'?' rechts':z.side==='a'?' · Seite der Ausführung':z.side==='g'?' · Gegenseite':z.side==='b'?' · beide Seiten':'');
 // Zahl in der Einheit des Tests; Texte wie „2 cm“ oder „ja“ unverändert
 function goalVal(n,v){if(v==null||v==='')return '–';if(typeof v!=='number')return String(v);const u=(testOf(n)||{}).u||'';const s=v.toLocaleString('de-DE');return u==='cm'?s+' cm':u==='s'?s+' s':/°/.test(u)?s+'°':s}
 function goalLast(z){const v=lastTestVal(z.test,z.side||'l');return v==null?'noch kein Wert':'zuletzt '+goalVal(z.test,v)}
@@ -2085,13 +2091,25 @@ function goalStr(z){return `${goalName(z)} · Ziel ${goalVal(z.test,z.target)} �
 // Abschnitte bleiben beim Umbruch zusammen („zuletzt 5 cm“ nicht zerrissen)
 const nw=t=>`<span style="white-space:nowrap">${esc(t)}</span>`;
 const goalHtml=z=>`<b>${esc(goalName(z))}</b> · ${nw('Ziel '+goalVal(z.test,z.target))} · ${nw(goalLast(z))}`;
-// Absicht der Übung (S.exTests[exId] = [{test, side}], der erste ist primär); Ziel nur, wenn Test und Seite übereinstimmen
+// Absicht der Übung (S.exTests[exId] = [{test, side}], der erste ist primär); Ziel nur, wenn Test und (ermittelte) Seite übereinstimmen
 const exTests=exId=>(S.exTests||{})[exId]||[];
 const zielOf=t=>P().ziele.find(z=>z.test===t.test&&(z.side||'')===(t.side||''))||null;
-function exTestsLine(e){const ts=exTests(e.id);const lb='<span class="gl">soll verbessern:</span> ';
+// Seite der Absicht (Entscheidung 02.10.2026): l/r fest, b beide Seiten, a Seite der Ausführung, g Gegenseite (a und g bei getrennten Übungen).
+// a und g ergeben sich aus der Ausführung: Plan-Position „nur links“/„nur rechts“/„beide Seiten“; ohne bekannte Ausführung beide Seiten.
+const SEITE_FOLGT=['a','g','b'];
+const sdSides=sd=>sd==='L'?['l']:sd==='R'?['r']:['l','r'];
+const planSides=exId=>{const o=new Set();P().blocks.forEach(b=>b.items.forEach(([id,,sd])=>{if(id===exId)sdSides(sd).forEach(x=>o.add(x))}));return ['l','r'].filter(x=>o.has(x))};
+const intentSides=(t,ausf)=>{const s=t.side||'';if(!s)return [''];if(s==='l'||s==='r')return [s];if(s==='b')return ['l','r'];
+  const a=ausf&&ausf.length?ausf:['l','r'];return s==='g'&&a.length===1?[a[0]==='l'?'r':'l']:a};
+// Name mit ermittelter Seite: „SLR rechts“, bei beiden Seiten „SLR L/R“
+const sideName=(test,ss)=>testShort(test)+(ss.length===2?' L/R':ss[0]==='l'?' links':ss[0]==='r'?' rechts':'');
+const planSideLbl=ps=>!ps.length?'nicht im Plan':ps.length===2?'im Plan: beide Seiten':ps[0]==='l'?'im Plan: links':'im Plan: rechts';
+function exTestsLine(e,sd){const ts=exTests(e.id);const lb='<span class="gl">soll verbessern:</span> ';
   if(!ts.length)return lb+'wählen';
-  const t=ts[0],z=zielOf(t);
-  return lb+esc(goalName(t))+(z?' · '+nw('Ziel '+goalVal(z.test,z.target)):'')+' · '+nw(goalLast(t))+ts.slice(1).map(x=>' · '+nw('+ '+goalName(x))).join('')}
+  const t=ts[0],ss=intentSides(t,sdSides(sd));
+  const mehr=ts.slice(1).map(x=>' · '+nw('+ '+sideName(x.test,intentSides(x,sdSides(sd))))).join('');
+  if(ss.length===1){const k={test:t.test,side:ss[0]},z=zielOf(k);return lb+esc(sideName(t.test,ss))+(z?' · '+nw('Ziel '+goalVal(z.test,z.target)):'')+' · '+nw(goalLast(k))+mehr}
+  return lb+esc(testShort(t.test))+ss.map(x=>{const k={test:t.test,side:x},z=zielOf(k);return ' · '+nw((x==='l'?'L ':'R ')+(z?'Ziel '+goalVal(z.test,z.target)+' ':'')+goalLast(k))}).join('')+mehr}
 // Ziel anlegen (z=null) oder ändern; after() zeichnet das Plan-Sheet neu
 function goalSheet(z,after){
   let test=z?z.test:null, side=z?(z.side||'l'):'l', val=z?z.target:null, pick=!z;
@@ -2136,7 +2154,7 @@ function exTestsSheet(e,after){
     const rows=list.map((t,i)=>`<div class="item goal"><div class="t"><b>${esc(goalName(t))}</b>${i===0?' <span class="badge">primär</span>':''}</div>${i>0?`<button class="chip sm" data-xtup="${i}" aria-label="${esc(goalName(t))} primär machen">↑</button>`:''}<button class="chip sm" data-xtrm="${i}" aria-label="${esc(goalName(t))} entfernen">−</button></div>`).join('')||'<div class="hint">Noch kein Test gewählt.</div>';
     const tl=`<div class="list">${TESTS.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-xt="${i}"><div class="t"><b>${t.n}</b><small>${t.u}</small></div><span class="badge">${t.g}</span></button>`).join('')}</div>`;
     openSheet(`<h3>Soll verbessern · ${esc(e.name)}</h3><div class="list">${rows}</div>
-    ${test?`<div class="row between"><span class="lbl">Seite · ${esc(testShort(test))}</span><div class="chips">${[['l','links'],['r','rechts']].map(([k,l])=>`<button class="chip sm" data-xs="${k}">${l}</button>`).join('')}</div></div>`
+    ${test?`<div class="row between"><span class="lbl">Seite · ${esc(testShort(test))}</span><div class="chips">${(e.side==='getrennt'?[['a','Seite der Ausführung'],['g','Gegenseite']]:[['l','links'],['r','rechts'],['b','beide']]).map(([k,l])=>`<button class="chip sm" data-xs="${k}">${l}</button>`).join('')}</div></div>`
       :pick?`<div class="lbl">Test</div>${tl}`:'<button class="btn ghost wide" id="xtAdd">+ Test</button>'}
     <button class="btn primary wide" id="xtSave">Übernehmen</button>`);
     const add=t=>{if(list.some(x=>x.test===t.test&&x.side===t.side))toast('Schon gewählt');else list.push(t);pick=false;test=null;draw()};
