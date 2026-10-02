@@ -310,6 +310,7 @@
   .nhead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px}
   .nplus{position:relative;flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);font:inherit;font-size:16px;font-weight:700;line-height:1;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;justify-content:center;padding:0 0 1px;cursor:pointer}
   .nplus::after{content:"";position:absolute;inset:-10px}
+  .nplus[hidden]{display:none}
   .nadd{position:relative;margin:4px 0 6px}
   .nadd input{width:100%;box-sizing:border-box;font-size:13px;line-height:1.35;padding:6px 36px 6px 9px;border-radius:8px}
   .nadd .nok{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font:inherit;font-size:13px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
@@ -326,7 +327,10 @@
   .pzt .pzn{color:var(--ink2);font-weight:400}
   .pzl .pzc{display:block;width:100%;text-align:left;font-size:13px;line-height:1.35;color:var(--ink);padding:5px 0 5px 12px;border-top:1px solid var(--line2);overflow-wrap:anywhere}
   .pzl .pzc:first-child{border-top:0}
-  .pzadd{padding:4px 0 2px 12px}
+  .pzadd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0 2px 12px}
+  .pzadd .pzdel{font-size:12px}
+  .pzadd .nadd{flex:1;min-width:0}
+  #pzHead{margin-bottom:2px}
   /* Merksätze in der Rettungskiste: groß lesbar, Akzentstreifen, Datum darunter */
   .merk{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:0 0 8px}
   .merk .mt{display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;font-size:17px;line-height:1.4;font-weight:500;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer}
@@ -520,7 +524,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.16';
+const APP_VERSION='1.0.17';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -553,6 +557,10 @@ const TAG_AKT = ['Buero','HalbBuero','Kochen']; let tagMore=false;
 const TYPES = {K:{l:'Korrektiv',rec:0},I:{l:'Intensiv',rec:48},Pause:{l:'Pause'},Tennis:{l:'Tennis',rec:48},Laufen:{l:'Laufen',rec:24},Kochen:{l:'Kochen lang'},Buero:{l:'Bürotag',fix:480},HalbBuero:{l:'Halber Bürotag',fix:240}};
 // Prinzip-Tags sind Stammdaten; die Prinzip-Cue-Texte liefert der Nutzer (Testkanal: Beispieltexte). Laufender Stand in S.prinzip.
 const PRINZIP_TAGS=['Atmung','Knie-Vorschub','Becken-Aufrichtung','Fußposition','Brustkorb-Rotation'];
+// Prinzipien sind seit 1.0.16 vom Nutzer pflegbar (anlegen, löschen): aktuelle Liste in S.prinzipTags, sonst die fünf Start-Prinzipien.
+// Gelöschte Prinzipien verschwinden überall; das Tag an Übungen bleibt gespeichert, wird aber nicht mehr angezeigt.
+const pzTags=()=>Array.isArray(S.prinzipTags)?S.prinzipTags:PRINZIP_TAGS;
+const pzHas=t=>pzTags().includes(t);
 const prinzipSeed=()=>TEST?{
   'Atmung':['Ruhig und lange ausatmen','Schultern bleiben unten','Nicht die Luft anhalten'],
   'Knie-Vorschub':['Knie kontrolliert nach vorn, ohne Hohlkreuz'],
@@ -727,6 +735,7 @@ function hydrate(obj){
   Object.entries(S.dose||{}).forEach(([id,d])=>{const e=EX.find(x=>x.id===id);if(e)e.d=d});
   EX.forEach(e=>{if(!Array.isArray(e.tags))e.tags=[];if(!Array.isArray(e.cues))e.cues=[];if(!e.d)e.d={sets:1,n:1,u:'Wdh'};fixVideo(e)});
   Object.entries(S.prinzip||{}).forEach(([k,arr])=>{if(Array.isArray(arr))PRINZIP[k]=arr});
+  pzTags().forEach(t=>{if(!Array.isArray(PRINZIP[t]))PRINZIP[t]=[]});
   fixKalRows(); ensureDay(iso(today));
 }
 function freshState(){
@@ -1085,7 +1094,7 @@ function rTraining(){
   const rows=s.items.map((it,idx)=>{const e=exById(it.id); if(!it.open)it.noteOpen=false;
     // Zugeklappt nur die Anzahl eigener Cues; aufgeklappt eigene und Prinzip-Cues vollständig im Kasten
     const nc=e.cues.length, cnt=it.open?'':`<span class="cuecnt"> · ${nc?nc+(nc===1?' Cue':' Cues'):'keine Cues'}</span>`;
-    const box=!it.open?'':`<div class="cuebox">${nc?e.cues.map((c,ci)=>`<button class="cueline" data-ec="${idx}:${ci}">${esc(c)}</button>`).join(''):'<div class="cuenone">Noch keine eigenen Cues.</div>'}${e.tags.filter(t=>(PRINZIP[t]||[]).length).map(t=>`<div class="cuetag">${esc(t)}</div>${(PRINZIP[t]||[]).map((c,ci)=>`<button class="cueline p" data-pc="${t}:${ci}">${esc(c)}</button>`).join('')}`).join('')}</div>`;
+    const box=!it.open?'':`<div class="cuebox">${nc?e.cues.map((c,ci)=>`<button class="cueline" data-ec="${idx}:${ci}">${esc(c)}</button>`).join(''):'<div class="cuenone">Noch keine eigenen Cues.</div>'}${e.tags.filter(t=>pzHas(t)&&(PRINZIP[t]||[]).length).map(t=>`<div class="cuetag">${esc(t)}</div>${(PRINZIP[t]||[]).map((c,ci)=>`<button class="cueline p" data-pc="${t}:${ci}">${esc(c)}</button>`).join('')}`).join('')}</div>`;
     return `<div class="ex ${it.r?'done':''} ${it.skip?'skipped':''} ${it.open?'open':''}" data-i="${idx}"><span class="swhint l">überspringen</span><span class="swhint r">doch machen</span>
       <div class="head"><div class="name"><button class="nm" data-tog="${idx}"><b>${esc(e.name)}${it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b></button><small><button class="chip sm dose ${it.d&&!sameDose(it.d,e.d)?'dev':''}" data-dose="${idx}">${doseStr(it.d||e.d)}${it.d&&!sameDose(it.d,e.d)?' · geändert':''} ✎</button>${e.side==='getrennt'?`<span class="sidet"> · ${it.side==='L'?'nur links':it.side==='R'?'nur rechts':'beide Seiten'}</span>`:''}${cnt}${!it.open&&it.rt&&it.rt.nach?'<span style="color:var(--ink2)"> · Retest</span>':''}${it.skip?' · übersprungen':''}</small></div>
         <div class="rate"><button data-r="1" class="${it.r?'on':''}" title="gemacht" aria-pressed="${!!it.r}">✓</button><button data-pain class="pain ${it.pain?'on':''}" title="Problem oder Schmerz" aria-pressed="${!!it.pain}">!</button></div></div>
@@ -1372,7 +1381,7 @@ function sortable(list,onMove){
 let NEX_MORE=false;
 // Durchführung auf der Übungskarte: welche Tagesliste offen ist (je Übung 'g' gemacht, 'p' Probleme), nur für diese Sitzung
 let BILMODE={};
-const tagChips=(sel,attr)=>`<div class="chips tagchips">${Object.keys(PRINZIP).map(t=>`<button class="chip sm ${sel.includes(t)?'on':''}" ${attr}="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(t)}</button>`).join('')}</div>`;
+const tagChips=(sel,attr)=>`<div class="chips tagchips">${pzTags().map(t=>`<button class="chip sm ${sel.includes(t)?'on':''}" ${attr}="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(t)}</button>`).join('')}</div>`;
 function newExerciseSheet(cb){
   let cat='K',side='beidseitig',u='Wdh',nm='',region='',video='',tags=[],status='testphase';
   const keep=()=>{const i=document.getElementById('nn');if(i)nm=i.value;const r=document.getElementById('nreg');if(r)region=r.value;const v=document.getElementById('nvid');if(v)video=v.value};
@@ -1477,7 +1486,7 @@ function doseSheet(e,after,opts){
 }
 // Neuer Cue an einer Übung (Training und Bibliothekskarte); „stattdessen Prinzip X“ legt den Text als Prinzip-Cue ab (ein Tipp), auch wenn die Liste noch leer ist
 function cueNewSheet(e,dateIso){
-  const tags=e.tags.filter(t=>PRINZIP[t]);
+  const tags=e.tags.filter(pzHas);
   openSheet(`<h3>Neuer Cue</h3><div class="hint">Bezug: ${esc(e.name)}</div><textarea id="cuetxt" placeholder="Was hat die Ausführung verbessert?"></textarea>${tags.length?`<div class="chips">${tags.map(t=>`<button class="chip sm" data-pt="${esc(t)}">stattdessen Prinzip ${esc(t)}</button>`).join('')}</div>`:''}<button class="btn primary wide" id="cuesave">Speichern</button>`);
   const txt=()=>document.getElementById('cuetxt').value.trim();
   try{document.getElementById('cuetxt').focus({preventScroll:true})}catch(e){}
@@ -1619,7 +1628,7 @@ function noteEditSheet(ref){const r=noteRef(ref); if(!r)return; const e=exById(r
 }
 // Notiz hinzufügen, auf der Karte und im Training gleich: „+“ im Kopf „Notizen“ öffnet direkt darunter ein Feld mit „✓“ (das „+“ ist dann weg).
 // Gespeichert wird bei jeder Eingabe; „✓“ oder die Eingabetaste schließt das Feld (Toast), die Notiz steht dann oben in der Liste.
-const notePlus=key=>`<button class="nplus" data-nadd="${key}" aria-label="Notiz hinzufügen">+</button>`;
+const notePlus=(key,lbl)=>`<button class="nplus" data-nadd="${key}" aria-label="${lbl||'Notiz hinzufügen'}">+</button>`;
 const noteInput=(key,val,ph,attr)=>`<div class="nadd"><input type="text" data-ninput="${key}" ${attr||''} enterkeyhint="done" autocomplete="off" placeholder="${ph}" value="${esc(val||'')}"><button class="nok" data-nok="${key}" aria-label="Notiz fertig">✓</button></div>`;
 function noteFocus(key){const i=document.querySelector(`[data-ninput="${key}"]`);if(!i)return;try{i.focus()}catch(e){}const n=i.value.length;try{i.setSelectionRange(n,n)}catch(e){}}
 // Karte: offenes Feld je Übung; n ist die beim Schreiben angelegte Notiz in S.exNotes (steht bis „✓“ nur im Feld, nicht in der Liste)
@@ -1681,7 +1690,7 @@ function rBib(){
     <div class="exsec"><span class="ftl">Cues</span>
     ${e.cues.length?`<div class="sortlist" data-sortcues="${e.id}">${e.cues.map((c,ci)=>`<div class="sortrow">${e.cues.length>1?DRAGH:''}<button class="cue edit" data-bec="${e.id}:${ci}">${esc(c)}</button></div>`).join('')}</div>`:'<div class="hint">Noch keine eigenen Cues.</div>'}
     <div class="chips"><button class="chip sm" data-addcue="${e.id}">+ Cue</button></div>
-    ${e.tags.map(t=>`<details><summary>${esc(t)} · ${(PRINZIP[t]||[]).length} Prinzip-Cues</summary>${(PRINZIP[t]||[]).map(c=>`<div class="cue p">${esc(c)}</div>`).join('')}</details>`).join('')}</div>
+    ${e.tags.filter(pzHas).map(t=>`<details><summary>${esc(t)} · ${(PRINZIP[t]||[]).length} Prinzip-Cues</summary>${(PRINZIP[t]||[]).map(c=>`<div class="cue p">${esc(c)}</div>`).join('')}</details>`).join('')}</div>
     <div class="exsec"><div class="row"><span class="lbl">Status</span><div class="chips">${['aktiv','testphase','geparkt','verworfen'].map(x=>`<button class="chip sm ${st===x?'on':''}" data-st="${e.id}:${x}">${x}</button>`).join('')}</div></div>
     ${ip?`<button class="btn ghost wide" data-rmplan="${e.id}">Aus dem Plan nehmen</button>`:st!=='verworfen'?`<div class="row" style="flex-wrap:nowrap"><button class="btn ghost" style="flex:1" data-toplan="${e.id}">In den Plan</button>${qBtn('toplan')}</div>${qHint('toplan','Testphase: die Übung bleibt gekennzeichnet, bis du sie auf aktiv setzt. Sie darf im Plan stehen.')}`:''}
     <div class="row" style="justify-content:flex-end"><button class="tog" data-exedit="${e.id}" style="font-size:13px">Bearbeiten</button></div></div>
@@ -1814,7 +1823,7 @@ function inboxSheet(){
   const noteIso=l=>{const m=/^(\d{2})\.(\d{2})\.$/.exec(l||'');if(!m)return iso(today);const y=today.getFullYear();const k=`${y}-${m[2]}-${m[1]}`;return k>iso(today)?`${y-1}-${m[2]}-${m[1]}`:k};
   document.querySelectorAll('[data-assign]').forEach(b=>b.onclick=()=>{const n=S.inbox[+b.dataset.assign];
     const done=()=>{const i=S.inbox.indexOf(n);if(i>=0)S.inbox.splice(i,1);toast('Zugeordnet');render();if(S.inbox.length)inboxSheet();else closeSheet()};
-    openSheet(`<h3>Zuordnen</h3><div class="cue">${esc(n.t)}</div><div class="lbl">Übung</div><div class="chips"><button class="chip sm" id="toCue">Cue an Übung ›</button><button class="chip sm" id="toExNote">Notiz zur Übung ›</button></div><div class="lbl">Prinzip-Cue</div><div class="chips">${Object.keys(PRINZIP).map(p=>`<button class="chip sm" data-to="p:${p}">${p}</button>`).join('')}</div><div class="lbl">Oder</div><div class="chips"><button class="chip sm" data-to="r:">Rettungskiste</button><button class="chip sm" data-to="g:">Allgemein</button></div><div class="hint">Allgemein nimmt die Notiz nur aus dieser Liste, im Journal des Tages bleibt sie.</div>`);
+    openSheet(`<h3>Zuordnen</h3><div class="cue">${esc(n.t)}</div><div class="lbl">Übung</div><div class="chips"><button class="chip sm" id="toCue">Cue an Übung ›</button><button class="chip sm" id="toExNote">Notiz zur Übung ›</button></div><div class="lbl">Prinzip-Cue</div><div class="chips">${pzTags().map(p=>`<button class="chip sm" data-to="p:${p}">${p}</button>`).join('')}</div><div class="lbl">Oder</div><div class="chips"><button class="chip sm" data-to="r:">Rettungskiste</button><button class="chip sm" data-to="g:">Allgemein</button></div><div class="hint">Allgemein nimmt die Notiz nur aus dieser Liste, im Journal des Tages bleibt sie.</div>`);
     document.getElementById('toCue').onclick=()=>pickExercise(id=>{const e=exById(id);setCues(e,[...e.cues,n.t]);done()},{test:false,title:'Cue zu welcher Übung?'});
     document.getElementById('toExNote').onclick=()=>pickExercise(id=>{S.exNotes=S.exNotes||{};(S.exNotes[id]=S.exNotes[id]||[]).push({d:noteIso(n.d),t:n.t});done()},{test:false,title:'Notiz zu welcher Übung?'});
     document.querySelectorAll('[data-to]').forEach(c=>c.onclick=()=>{const [k,v]=c.dataset.to.split(':');if(k==='p'){PRINZIP[v].push(n.t);S.prinzip=S.prinzip||{};S.prinzip[v]=PRINZIP[v]}else if(k==='r'){S.rettung=S.rettung||[];S.rettung.push({id:newRettId(),t:n.t,a:'Cue',x:''})}done()})});
@@ -2267,16 +2276,16 @@ function rettArtFelder(chips,ti,tx,tm){
 const RETT_PZ=new Set();
 const savePrinzip=t=>{S.prinzip=S.prinzip||{};S.prinzip[t]=PRINZIP[t];save()};
 function rettKeep(){const st=sheet.scrollTop;rettSheet();sheet.scrollTop=st}
-function rettPzHtml(){return PRINZIP_TAGS.map(t=>{const cs=PRINZIP[t]||[];
+function rettPzHtml(){return pzTags().map(t=>{const cs=PRINZIP[t]||[];
   return `<details class="pzt" data-pzt="${esc(t)}"${RETT_PZ.has(t)?' open':''}><summary>${esc(t)} <span class="pzn">· ${cs.length}</span></summary>`
     +`<div class="pzl">${cs.map((c,ci)=>`<button class="pzc" data-pzc="${esc(t)}:${ci}">${esc(c)}</button>`).join('')}</div>`
-    +`<div class="pzadd">${notePlus('pz:'+t)}</div></details>`}).join('')}
+    +`<div class="pzadd">${notePlus('pz:'+t,'Prinzip-Cue zu '+esc(t)+' hinzufügen')}<button class="tog danger pzdel" data-pzdel="${esc(t)}">Prinzip löschen</button></div></details>`}).join('')||'<div class="hint">Noch kein Prinzip. Lege mit „+“ eins an.</div>'}
 function rettSheet(){
   const d=D(); const R=S.rettung=S.rettung||[]; const hp=id=>(d.helped||[]).includes(id);
   const M=R.filter(r=>r.a==='Merksatz').sort((a,b)=>(b.d||'').localeCompare(a.d||'')), E=R.filter(r=>r.a!=='Merksatz');
   const merk=M.map(r=>`<div class="merk"><button class="mt" data-redit="${esc(r.id)}">${esc(r.t)}</button><div class="mf"><span class="md">${r.d?merkDatum(r.d):''}${hp(r.id)?' · <span style="color:var(--accent)">✓ heute geholfen</span>':''}</span><button class="chip sm" data-h="${esc(r.id)}">hat geholfen</button></div></div>`).join('');
   const list=E.map(r=>`<div class="item"><span class="badge">${esc(r.a)}</span><button class="t" style="text-align:left" data-redit="${esc(r.id)}"><b>${esc(r.t)}</b><small>${esc(r.x||'')}</small>${hp(r.id)?'<small style="color:var(--accent)">✓ heute geholfen</small>':''}</button><button class="chip sm" data-h="${esc(r.id)}">hat geholfen</button></div>`).join('');
-  openSheet(`<h3>Rettungskiste</h3><div class="hint">Was an schlechten Tagen geholfen hat. Kein Übungsbezug nötig. Tipp auf einen Eintrag ändert ihn.</div>${M.length?`<div class="lbl">Merksätze</div><div id="merkList">${merk}</div>`:''}<div class="lbl">Prinzipien</div><div id="pzList">${rettPzHtml()}</div>${E.length?'<div class="lbl">Weitere Einträge</div>':''}${E.length||!M.length?`<div class="list" id="rettList">${list||'<div class="hint" id="rettEmpty">Noch kein Eintrag. Lege unten an, was an schlechten Tagen hilft.</div>'}</div>`:''}
+  openSheet(`<h3>Rettungskiste</h3><div class="hint">Was an schlechten Tagen geholfen hat. Kein Übungsbezug nötig. Tipp auf einen Eintrag ändert ihn.</div>${M.length?`<div class="lbl">Merksätze</div><div id="merkList">${merk}</div>`:''}<div class="lbl nhead" id="pzHead"><span>Prinzipien</span>${notePlus('pzneu','Prinzip anlegen')}</div><div id="pzNeu"></div><div id="pzList">${rettPzHtml()}</div>${E.length?'<div class="lbl">Weitere Einträge</div>':''}${E.length||!M.length?`<div class="list" id="rettList">${list||'<div class="hint" id="rettEmpty">Noch kein Eintrag. Lege unten an, was an schlechten Tagen hilft.</div>'}</div>`:''}
   <div class="lbl">Neuer Eintrag</div><input type="text" id="rt" placeholder="Titel"><div class="chips" id="ra">${RETT_ARTEN.map((a,j)=>`<button class="chip sm ${j===1?'on':''}" data-a="${a}">${a}</button>`).join('')}</div><textarea id="rm" placeholder="Merksatz"></textarea><textarea id="rx" placeholder="Was genau hilft?"></textarea><button class="btn ghost wide" id="rs">Eintrag speichern</button>`);
   document.querySelectorAll('#sheet [data-h]').forEach(b=>b.onclick=()=>{const id=b.dataset.h;const r=R.find(x=>x.id===id);if(!r)return;d.helped=(d.helped||[]).filter(x=>typeof x==='string');if(!d.helped.includes(id)){d.helped.push(id);d.notes.push({k:'Rettung',t:r.t+' hat geholfen',b:'Rettungskiste'})}save();toast('Im Tag notiert');rettSheet()});
   document.querySelectorAll('#sheet [data-redit]').forEach(b=>b.onclick=()=>rettEditSheet(b.dataset.redit));
@@ -2284,6 +2293,19 @@ function rettSheet(){
   document.querySelectorAll('#pzList details').forEach(dt=>dt.ontoggle=()=>{const t=dt.dataset.pzt;if(dt.open)RETT_PZ.add(t);else RETT_PZ.delete(t)});
   document.querySelectorAll('#pzList [data-pzc]').forEach(b=>b.onclick=()=>{const i=b.dataset.pzc.lastIndexOf(':'),t=b.dataset.pzc.slice(0,i),ci=+b.dataset.pzc.slice(i+1);
     cueEditSheet(PRINZIP[t][ci],v=>{if(v==null)PRINZIP[t].splice(ci,1);else{PRINZIP[t][ci]=v;toast('Prinzip-Cue gespeichert')}savePrinzip(t);rettSheet()},'Prinzip '+t)});
+  // neues Prinzip: „+“ neben „Prinzipien“ öffnet ein Feld für den Namen; angelegt wird mit „✓“ oder Eingabetaste
+  const pn=document.querySelector('#pzHead [data-nadd]'); if(pn)pn.onclick=()=>{pn.hidden=true;const w=document.getElementById('pzNeu');
+    w.innerHTML=noteInput('pzneu','','Neues Prinzip, z. B. Kopfposition','maxlength="40"');const inp=w.querySelector('input'),ok=w.querySelector('.nok');
+    const fertig=()=>{const n=inp.value.trim().replace(/\s+/g,' ');inp.blur();
+      if(n&&pzTags().some(x=>x.toLowerCase()===n.toLowerCase())){toast('Prinzip „'+n+'“ gibt es schon');rettKeep();return}
+      if(n){S.prinzipTags=[...pzTags(),n];PRINZIP[n]=[];RETT_PZ.add(n);savePrinzip(n)}
+      rettKeep();if(n)toast('Prinzip angelegt')};
+    inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();fertig()}}; ok.onmousedown=ev=>ev.preventDefault(); ok.onclick=fertig; noteFocus('pzneu')};
+  // Prinzip löschen: echte Entscheidung (Cues gehen verloren), Rückfrage; Abbrechen führt zurück in die Rettungskiste
+  document.querySelectorAll('#pzList [data-pzdel]').forEach(b=>b.onclick=()=>{const t=b.dataset.pzdel,n=(PRINZIP[t]||[]).length,m=EX.filter(e=>e.tags.includes(t)).length;
+    confirmSheet(`Prinzip „${esc(t)}“ löschen?`,()=>{S.prinzipTags=pzTags().filter(x=>x!==t);PRINZIP[t]=[];RETT_PZ.delete(t);savePrinzip(t);toast('Prinzip gelöscht');rettSheet()},'Löschen',
+      `<div class="hint">${n?`${n} Prinzip-Cue${n===1?'':'s'} ${n===1?'wird':'werden'} mitgelöscht. `:''}${m?`Bei ${m} Übung${m===1?'':'en'} fällt das Prinzip weg.`:''}</div>`);
+    document.getElementById('cn').onclick=()=>rettSheet()});
   // „+“: Feld an Ort und Stelle (ohne Neuzeichnen, die Position im Sheet bleibt); der Cue entsteht beim ersten Buchstaben
   document.querySelectorAll('#pzList [data-nadd]').forEach(b=>b.onclick=()=>{const t=b.dataset.nadd.slice(3),wrap=b.parentElement;let idx=null;
     wrap.innerHTML=noteInput('pz:'+t,'','Neuer Prinzip-Cue'); const inp=wrap.querySelector('input'), ok=wrap.querySelector('.nok');
@@ -2361,7 +2383,7 @@ function pruefeUebungen(obj){
       if(d.kg!=null&&(typeof d.kg!=='number'||!isFinite(d.kg)||d.kg<=0||d.kg>500))f('kg muss eine Zahl über 0 sein oder fehlen');
     }
     if(u.region!=null&&!txt(u.region))f('Region muss ein Text sein');
-    if(u.prinzipTags!=null&&(!Array.isArray(u.prinzipTags)||u.prinzipTags.some(t=>!PRINZIP_TAGS.includes(t))))f('Prinzip-Tags nur aus: '+PRINZIP_TAGS.join(', '));
+    if(u.prinzipTags!=null&&(!Array.isArray(u.prinzipTags)||u.prinzipTags.some(t=>!pzHas(t))))f('Prinzip-Tags nur aus: '+pzTags().join(', '));
     if(u.video!=null&&!txt(u.video))f('Video muss ein Text sein');
     if(u.status!=null&&!['testphase','aktiv'].includes(u.status))f('Status muss „testphase“ oder „aktiv“ sein');
     if(u.cues!=null&&(!Array.isArray(u.cues)||u.cues.some(c=>!txt(c)||!c.trim())))f('Cues müssen eine Liste nicht leerer Texte sein');
