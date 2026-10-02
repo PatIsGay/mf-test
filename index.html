@@ -305,6 +305,12 @@
   /* Notizen zur Übung (Karte und Training unter den Cues): höchstens 6 sichtbar (notesFit), Rest im eigenen Scrollbereich; Tipp ändert */
   .trnotes{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
   .trn-h{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:2px}
+  /* Kopf „Notizen“ mit „+“ rechts; Feld zum Hinzufügen direkt darunter, „✓“ im Feld */
+  .nhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .nplus{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);font:inherit;font-size:22px;font-weight:600;line-height:1;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;justify-content:center;padding:0 0 2px;cursor:pointer}
+  .nadd{position:relative;margin:4px 0 6px}
+  .nadd input{width:100%;box-sizing:border-box;padding-right:48px}
+  .nadd .nok{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font:inherit;font-size:17px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
   .nlist{display:block;position:relative;min-width:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   .nlist.more{box-shadow:inset 0 -10px 8px -8px var(--line)}
   .nlist .nl{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:4px 0;font:inherit;font-size:13px;line-height:1.35;color:var(--ink);overflow-wrap:anywhere;cursor:pointer}
@@ -503,7 +509,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.12';
+const APP_VERSION='1.0.13';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -787,6 +793,7 @@ document.getElementById('mehr').addEventListener('click',()=>mehrSheet());
 function setTabH(){const b=document.querySelector('nav.tabs .bar');if(b)document.documentElement.style.setProperty('--tabh',b.offsetHeight+'px')}
 window.addEventListener('resize',setTabH);
 function render(){
+  if(BIB_NOTE&&(S.tab!=='bib'||S.openEx!==BIB_NOTE.id)){if(BIB_NOTE.n)BIB_NOTE.n.t=BIB_NOTE.n.t.trim();BIB_NOTE=null}
   document.documentElement.classList.toggle('kalq',S.tab==='kal');
   setTabH(); main.classList.toggle('withbar',S.tab==='training'&&!!S.session&&!!S.sessShow);
   // laufende Einheit nach jeder Änderung als offenen Eintrag speichern
@@ -1053,20 +1060,25 @@ function rTraining(){
     return;
   }
   const curEntry=(i=>i>=0?S.days[s.date].done[i]:null)(S.days[s.date]?findEntry(s.date,s.block):-1);
-  // Notizen zur Übung unter den Cues (nur offene Übung): höchstens NOTE_MAX sichtbar, weitere im eigenen Scrollbereich (notesFit); Tipp ändert oder löscht
-  const trNotes=e=>{const all=exNoteList(e.id,curEntry);if(!all.length)return '';
-    return `<div class="trnotes"><div class="trn-h">Notizen${all.length>NOTE_MAX?` · ${all.length}`:''}</div>${noteListHtml(all,'tr:'+e.id)}</div>`};
-  const rows=s.items.map((it,idx)=>{const e=exById(it.id);
+  // Notizen zur Übung unter den Cues (nur offene Übung, „+“ fügt hinzu): höchstens NOTE_MAX sichtbar, weitere im eigenen Scrollbereich (notesFit); Tipp ändert oder löscht
+  // Notiz dieser Einheit: während das Feld offen ist, steht sie nur im Feld, danach oben in der Liste
+  const trNotes=(e,it,idx)=>{const all=exNoteList(e.id,it.noteOpen?curEntry:null);
+    return `<div class="trnotes"><div class="trn-h nhead"><span>Notizen${all.length>NOTE_MAX?` · ${all.length}`:''}</span>${notePlus('tr:'+idx)}</div>`
+      +(it.noteOpen?noteInput('tr:'+idx,it.note,it.pain?'Was war? z. B. Ziehen rechts, Fuß gerutscht':'Notiz zur Übung, z. B. nur rechts super',`data-note="${idx}"`):'')
+      +(all.length?noteListHtml(all,'tr:'+e.id):'')+`</div>`};
+  // „✓“ oder Eingabetaste: Feld schließen; die Notiz (schon gespeichert) steht danach oben in der Liste
+  const noteDoneTr=idx=>{const it=s.items[idx],i=document.querySelector(`#exlist [data-ninput="tr:${idx}"]`),v=(i?i.value:(it.note||'')).trim();
+    if(v)it.note=v;else delete it.note;it.noteOpen=false;if(i)i.blur();render();if(v)toast('Notiz gespeichert')};
+  const rows=s.items.map((it,idx)=>{const e=exById(it.id); if(!it.open)it.noteOpen=false;
     // Zugeklappt nur die Anzahl eigener Cues; aufgeklappt eigene und Prinzip-Cues vollständig im Kasten
     const nc=e.cues.length, cnt=it.open?'':`<span class="cuecnt"> · ${nc?nc+(nc===1?' Cue':' Cues'):'keine Cues'}</span>`;
     const box=!it.open?'':`<div class="cuebox">${nc?e.cues.map((c,ci)=>`<button class="cueline" data-ec="${idx}:${ci}">${esc(c)}</button>`).join(''):'<div class="cuenone">Noch keine eigenen Cues.</div>'}${e.tags.filter(t=>(PRINZIP[t]||[]).length).map(t=>`<div class="cuetag">${esc(t)}</div>${(PRINZIP[t]||[]).map((c,ci)=>`<button class="cueline p" data-pc="${t}:${ci}">${esc(c)}</button>`).join('')}`).join('')}</div>`;
     return `<div class="ex ${it.r?'done':''} ${it.skip?'skipped':''} ${it.open?'open':''}" data-i="${idx}"><span class="swhint l">überspringen</span><span class="swhint r">doch machen</span>
       <div class="head"><div class="name"><button class="nm" data-tog="${idx}"><b>${esc(e.name)}${it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b></button><small><button class="chip sm dose ${it.d&&!sameDose(it.d,e.d)?'dev':''}" data-dose="${idx}">${doseStr(it.d||e.d)}${it.d&&!sameDose(it.d,e.d)?' · geändert':''} ✎</button>${e.side==='getrennt'?`<span class="sidet"> · ${it.side==='L'?'nur links':it.side==='R'?'nur rechts':'beide Seiten'}</span>`:''}${cnt}${!it.open&&it.rt&&it.rt.nach?'<span style="color:var(--ink2)"> · Retest</span>':''}${it.skip?' · übersprungen':''}</small></div>
         <div class="rate"><button data-r="1" class="${it.r?'on':''}" title="gemacht" aria-pressed="${!!it.r}">✓</button><button data-pain class="pain ${it.pain?'on':''}" title="Problem oder Schmerz" aria-pressed="${!!it.pain}">!</button></div></div>
-      <div class="body">${it.open?videoBox(e,'tr'):''}${box}${it.open?trNotes(e):''}
+      <div class="body">${it.open?videoBox(e,'tr'):''}${box}${it.open?trNotes(e,it,idx):''}
         ${!it.rt?'':`<div class="rtline"><span>${esc(testShort(it.rt.test))} · ${rtText(it.rt)}</span>${it.rt.nach?`<button class="chip sm" data-rtdel="${idx}">ändern</button>`:`<button class="chip sm" data-rtnach="${idx}">danach messen</button>`}</div>`}
-        <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}${timerOn(it)?`<button class="tmr" data-timerstop="${idx}" aria-label="Timer stoppen">⏱ ${fmtSec(timerLeft())}</button>`:`<button data-timer="${idx}">Timer</button>`}<button data-notetog="${idx}" aria-pressed="${!!(it.noteOpen||it.note||it.pain)}">Notiz</button><button data-more="${idx}" aria-label="Mehr: + Cue, überspringen">⋯</button></div>
-        ${it.noteOpen||it.note||it.pain?`<input type="text" placeholder="${it.pain?'Was war? z. B. Ziehen rechts, Fuß gerutscht':'Notiz zur Übung, z. B. nur rechts super'}" value="${esc(it.note||'')}" data-note="${idx}">`:''}
+        <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}${timerOn(it)?`<button class="tmr" data-timerstop="${idx}" aria-label="Timer stoppen">⏱ ${fmtSec(timerLeft())}</button>`:`<button data-timer="${idx}">Timer</button>`}<button data-more="${idx}" aria-label="Mehr: + Cue, überspringen">⋯</button></div>
       </div></div>`}).join('');
   const done=s.items.filter(i=>i.r).length, total=s.items.filter(i=>!i.skip).length, todo=s.items.filter(exTodo).length;
   main.innerHTML=`<section class="card" id="sesshead"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><b>${esc(s.label)}</b>${s.date!==iso(today)?` <span class="badge">Nachtrag ${dfmt(s.date)}</span>`:''}${s.snapshot!=null?' <span class="badge">fortgesetzt</span>':''}<div class="hint" style="display:flex;align-items:center;gap:8px">${done} von ${total} gemacht · ${durStr(sessMin(s))}${qBtn('haken')}</div></div><button class="btn ghost" id="addEx">+ Übung</button></div>${qHint('haken','Haken = gemacht. „!“ = Problem bei der Ausführung oder Schmerz, schreib kurz dazu, was war. Wirkung misst du mit „Test davor“, die Reaktion später am Tag und am Folgetag zeigt der Kalender.','margin-top:8px')}
@@ -1090,14 +1102,15 @@ function rTraining(){
     if(!b) return; if(b.dataset.nedit!=null){noteEditSheet(b.dataset.nedit);return} const e=exById(it.id);
     if(b.dataset.dose!=null){doseSheet(e,render,{session:it});return}
     if(b.dataset.r){it.r=it.r?null:1;it.skip=false;it.t=it.r?Date.now():null;if(it.r&&it.open)openNext(s.items,idx);render();return}
-    // „!“: Ausnahme setzen, gilt zugleich als gemacht; Übung bleibt bzw. wird offen, Fokus in die Kurznotiz. Erneuter Tipp hebt nur die Ausnahme auf.
+    // „!“: Ausnahme setzen, gilt zugleich als gemacht; Übung bleibt bzw. wird offen, Notizfeld offen mit Fokus. Erneuter Tipp hebt nur die Ausnahme auf.
     if(b.hasAttribute('data-pain')){if(it.pain){it.pain=false;render();return}
-      it.pain=true;if(!it.r){it.r=1;it.skip=false;it.t=Date.now()}if(!it.open){s.items.forEach(x=>x.open=false);it.open=true}render();
-      const inp=document.querySelector(`#exlist [data-note="${idx}"]`);if(inp)inp.focus();return}
+      it.pain=true;if(!it.r){it.r=1;it.skip=false;it.t=Date.now()}if(!it.open){s.items.forEach(x=>x.open=false);it.open=true}it.noteOpen=true;render();
+      noteFocus('tr:'+idx);return}
     if(b.dataset.rt!=null){rtStart(it,render);return}
     if(b.dataset.rtnach!=null){rtAfter(it,render);return}
     if(b.dataset.rtdel!=null){delete it.rt;render();return}
-    if(b.dataset.notetog!=null){if(it.note||it.pain){const inp=row.querySelector('[data-note]');if(inp)inp.focus();return}it.noteOpen=!it.noteOpen;render();if(it.noteOpen){const inp=document.querySelector(`#exlist [data-note="${idx}"]`);if(inp)inp.focus()}return}
+    if(b.dataset.nadd!=null){it.noteOpen=true;render();noteFocus('tr:'+idx);return}
+    if(b.dataset.nok!=null){noteDoneTr(idx);return}
     if(b.dataset.more!=null){moreSheet(idx);return}
     if(b.dataset.timer!=null){startTimer(it,e);render();return}
     if(b.dataset.timerstop!=null){stopTimer();render();toast('Timer gestoppt');return}
@@ -1113,7 +1126,9 @@ function rTraining(){
       closeSheet();
       if(m==='skip'){it.skip=!it.skip;if(it.skip){it.r=null;it.t=Date.now();if(it.open)openNext(s.items,idx)}render();toast(it.skip?'Übersprungen':'Doch machen');return}})};
   // Notiz zur Übung: bei jeder Eingabe mitspeichern, ohne neu zu zeichnen (Fokus bleibt)
-  list.querySelectorAll('[data-note]').forEach(i=>i.oninput=e=>{s.items[+i.dataset.note].note=e.target.value;syncSession();save()});
+  list.querySelectorAll('[data-note]').forEach(i=>{i.oninput=e=>{s.items[+i.dataset.note].note=e.target.value;syncSession();save()};
+    i.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();noteDoneTr(+i.dataset.note)}}});
+  list.querySelectorAll('[data-nok]').forEach(b=>b.onmousedown=ev=>ev.preventDefault());
   // + Übung: bei getrennter Übung zuerst die Seite wählen (wie „In den Plan“), dann Testphase wie bisher
   document.getElementById('addEx').onclick=()=>pickExercise((id,test)=>{const ex=exById(id);
     const add=side=>{s.items.push({id,extra:true,side});if(test&&!inPlan(id)&&exStatus(ex)!=='testphase'){S.exStatus[id]='testphase';addEvent(ex.name+': Status Testphase (im Training)');toast('Als Testphase markiert')}render()};
@@ -1589,6 +1604,14 @@ function noteEditSheet(ref){const r=noteRef(ref); if(!r)return; const e=exById(r
   document.getElementById('exns').onclick=()=>{const v=document.getElementById('exnt').value.trim();if(v&&v!==r.t){r.set(v);toast('Notiz gespeichert')}closeSheet();render()};
   document.getElementById('exnd').onclick=()=>{r.del();closeSheet();toast('Notiz gelöscht');render()};
 }
+// Notiz hinzufügen, auf der Karte und im Training gleich: „+“ im Kopf „Notizen“ öffnet direkt darunter ein Feld mit „✓“.
+// Gespeichert wird bei jeder Eingabe; „✓“ oder die Eingabetaste schließt das Feld (Toast), die Notiz steht dann oben in der Liste.
+const notePlus=key=>`<button class="nplus" data-nadd="${key}" aria-label="Notiz hinzufügen">+</button>`;
+const noteInput=(key,val,ph,attr)=>`<div class="nadd"><input type="text" data-ninput="${key}" ${attr||''} enterkeyhint="done" autocomplete="off" placeholder="${ph}" value="${esc(val||'')}"><button class="nok" data-nok="${key}" aria-label="Notiz fertig">✓</button></div>`;
+function noteFocus(key){const i=document.querySelector(`[data-ninput="${key}"]`);if(!i)return;try{i.focus()}catch(e){}const n=i.value.length;try{i.setSelectionRange(n,n)}catch(e){}}
+// Karte: offenes Feld je Übung; n ist die beim Schreiben angelegte Notiz in S.exNotes (steht bis „✓“ nur im Feld, nicht in der Liste)
+let BIB_NOTE=null;
+function bibNoteDone(){const B=BIB_NOTE;BIB_NOTE=null;if(B&&B.n){B.n.t=B.n.t.trim();save()}const a=document.activeElement;if(a&&a.blur)a.blur();render();if(B&&B.n)toast('Notiz gespeichert')}
 const daysBetween=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);
 
 // ---------- Bibliothek ----------
@@ -1617,9 +1640,10 @@ function rBib(){
     return `<div class="exdone"><span class="ftl">${m==='p'?'Probleme am':'gemacht am'}${all.length>ks.length?' · die letzten '+ks.length:''}</span><div class="chips">${ks.map(k=>`<button class="chip sm" data-exday="${k}">${dfmt(k)}</button>`).join('')}</div></div>`};
   const bilKachel=(e,m,n,l)=>{const an=BILMODE[e.id]===m, leer=!bilTage(e,m).length;return `<button class="bil" data-bil="${e.id}:${m}" aria-pressed="${an&&!leer}"${leer?' disabled':''}><b>${n}</b><small>${l}</small></button>`};
   // datierte Notizen je Übung (S.exNotes) und Kurznotizen aus Einheiten, gemeinsam neueste oben; Tipp auf eine eigene Notiz öffnet Bearbeiten/Löschen, Kurznotizen nur Anzeige
-  const notesRow=e=>{const all=exNoteList(e.id);
-    return `<div class="nrow exsec"><span class="ftl">Notizen${all.length>NOTE_MAX?' · '+all.length:''}</span>${all.length?noteListHtml(all,'bib:'+e.id):''}`
-      +`<div class="chips"><button class="chip sm" data-addnote="${e.id}">+ Notiz</button></div></div>`};
+  const notesRow=e=>{const op=!!BIB_NOTE&&BIB_NOTE.id===e.id, dn=op?BIB_NOTE.n:null, ns=(S.exNotes||{})[e.id]||[];
+    const ohne=dn?`n:${e.id}:${ns.indexOf(dn)}`:null, all=exNoteList(e.id).filter(o=>o.ref!==ohne);
+    return `<div class="nrow exsec"><div class="exsec-h nhead"><span class="ftl">Notizen${all.length>NOTE_MAX?' · '+all.length:''}</span>${notePlus('bib:'+e.id)}</div>`
+      +(op?noteInput('bib:'+e.id,dn?dn.t:'','Beobachtung, Verdacht, Entscheidung'):'')+(all.length?noteListHtml(all,'bib:'+e.id):'')+`</div>`};
   // „Soll verbessern“: Tests der Übung mit Ziel und letztem Wert, oben auf der Karte; „ändern“ öffnet die Auswahl wie im Plan
   const zielSec=e=>{const ts=exTests(e.id);
     return `<div class="exsec ziel"><div class="exsec-h"><span>Soll verbessern</span><button class="tog" data-exziel="${e.id}">${ts.length?'ändern':'wählen'}</button></div>`
@@ -1657,10 +1681,15 @@ function rBib(){
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.openEx=S.openEx===b.dataset.open?null:b.dataset.open;render()});
   document.querySelectorAll('[data-rtday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.rtday));
   document.querySelectorAll('[data-exday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.exday));
-  // Notizen zur Übung: neu anlegen mit heutigem Datum; Ändern und Löschen über noteEditSheet (auch im Training)
-  document.querySelectorAll('[data-addnote]').forEach(b=>b.onclick=()=>{const e=exById(b.dataset.addnote);
-    openSheet(`<h3>Notiz zu ${esc(e.name)}</h3><textarea id="exnt" placeholder="Beobachtung, Verdacht, Entscheidung"></textarea><button class="btn primary wide" id="exns">Speichern</button>`);
-    document.getElementById('exns').onclick=()=>{const v=document.getElementById('exnt').value.trim();if(v){S.exNotes=S.exNotes||{};(S.exNotes[e.id]=S.exNotes[e.id]||[]).push({d:iso(today),t:v});toast('Notiz gespeichert')}closeSheet();render()}});
+  // Notizen zur Übung: „+“ öffnet das Feld auf der Karte (bibNoteDone); Ändern und Löschen über noteEditSheet (auch im Training)
+  document.querySelectorAll('[data-nadd^="bib:"]').forEach(b=>b.onclick=()=>{const id=b.dataset.nadd.slice(4);if(!(BIB_NOTE&&BIB_NOTE.id===id))BIB_NOTE={id,n:null};render();noteFocus('bib:'+id)});
+  document.querySelectorAll('[data-ninput^="bib:"]').forEach(inp=>{const id=inp.dataset.ninput.slice(4);
+    inp.oninput=()=>{const B=BIB_NOTE;if(!B||B.id!==id)return;const v=inp.value;S.exNotes=S.exNotes||{};const ns=S.exNotes[id]=S.exNotes[id]||[];
+      if(v.trim()){if(!B.n){B.n={d:iso(today),t:v};ns.push(B.n)}else B.n.t=v}
+      else if(B.n){const k=ns.indexOf(B.n);if(k>=0)ns.splice(k,1);if(!ns.length)delete S.exNotes[id];B.n=null}
+      save()};
+    inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();bibNoteDone()}}});
+  document.querySelectorAll('[data-nok^="bib:"]').forEach(b=>{b.onmousedown=ev=>ev.preventDefault();b.onclick=()=>bibNoteDone()});
   document.querySelectorAll('[data-nedit]').forEach(b=>b.onclick=()=>noteEditSheet(b.dataset.nedit));
   // eigene Cues auf der Karte bearbeiten, löschen und neu anlegen (wie im Training)
   document.querySelectorAll('[data-bec]').forEach(b=>b.onclick=()=>{const [id,ci]=b.dataset.bec.split(':');const e=exById(id);cueEditSheet(e.cues[+ci],v=>{const arr=[...e.cues];if(v==null)arr.splice(+ci,1);else arr[+ci]=v;setCues(e,arr);render()})});
