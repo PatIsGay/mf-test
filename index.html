@@ -306,6 +306,7 @@
   /* Notizen zur Übung (Karte und Training unter den Cues): höchstens 6 sichtbar (notesFit), Rest im eigenen Scrollbereich; Tipp ändert */
   .trnotes{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
   .trn-h{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:2px}
+  .cuehd{margin:2px 0 4px}
   /* Kopf „Notizen“ mit „+“ rechts; Feld zum Hinzufügen direkt darunter, „✓“ im Feld */
   .nhead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px}
   .nplus{position:relative;flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);font:inherit;font-size:16px;font-weight:700;line-height:1;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;justify-content:center;padding:0 0 1px;cursor:pointer}
@@ -524,7 +525,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.17';
+const APP_VERSION='1.0.18';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -816,6 +817,8 @@ function setTabH(){const b=document.querySelector('nav.tabs .bar');if(b)document
 window.addEventListener('resize',setTabH);
 function render(){
   if(BIB_NOTE&&(S.tab!=='bib'||S.openEx!==BIB_NOTE.id)){if(BIB_NOTE.n)BIB_NOTE.n.t=BIB_NOTE.n.t.trim();BIB_NOTE=null}
+  if(CUE_NEW){const k=CUE_NEW.key,ix=+k.split(':')[2],weg=k.startsWith('cue:tr:')?(S.tab!=='training'||!S.session||!S.session.items[ix]||!S.session.items[ix].open||S.session.items[ix].id!==CUE_NEW.id):(S.tab!=='bib'||S.openEx!==CUE_NEW.id);
+    if(weg){const e=exById(CUE_NEW.id);if(e&&CUE_NEW.i!=null&&e.cues[CUE_NEW.i]!=null){const arr=[...e.cues];arr[CUE_NEW.i]=arr[CUE_NEW.i].trim();setCues(e,arr)}CUE_NEW=null}}
   document.documentElement.classList.toggle('kalq',S.tab==='kal');
   setTabH(); main.classList.toggle('withbar',S.tab==='training'&&!!S.session&&!!S.sessShow);
   // laufende Einheit nach jeder Änderung als offenen Eintrag speichern
@@ -825,7 +828,7 @@ function render(){
   document.getElementById('subtitle').textContent=`${wd(today)}, ${fmt(today)}${today.getFullYear()}`;
   vidCheck(); const vk=vidKeep();
   ({heute:rHeute,training:rTraining,bib:rBib,kal:rKal})[S.tab]();
-  vidPlace(vk); vidThumbs(); notesFit();
+  vidPlace(vk); vidThumbs(); notesFit(); cueInputBind();
   save();
 }
 // Notizlisten (Karte und Training): Liste endet nach der NOTE_MAX-ten Notiz (Zeilen können umbrechen, darum gemessen, mit Bruchteilen
@@ -1094,13 +1097,14 @@ function rTraining(){
   const rows=s.items.map((it,idx)=>{const e=exById(it.id); if(!it.open)it.noteOpen=false;
     // Zugeklappt nur die Anzahl eigener Cues; aufgeklappt eigene und Prinzip-Cues vollständig im Kasten
     const nc=e.cues.length, cnt=it.open?'':`<span class="cuecnt"> · ${nc?nc+(nc===1?' Cue':' Cues'):'keine Cues'}</span>`;
-    const box=!it.open?'':`<div class="cuebox">${nc?e.cues.map((c,ci)=>`<button class="cueline" data-ec="${idx}:${ci}">${esc(c)}</button>`).join(''):'<div class="cuenone">Noch keine eigenen Cues.</div>'}${e.tags.filter(t=>pzHas(t)&&(PRINZIP[t]||[]).length).map(t=>`<div class="cuetag">${esc(t)}</div>${(PRINZIP[t]||[]).map((c,ci)=>`<button class="cueline p" data-pc="${t}:${ci}">${esc(c)}</button>`).join('')}`).join('')}</div>`;
+    const ck='cue:tr:'+idx, cl=cueListe(e,ck);
+    const box=!it.open?'':cueHead(ck,'trn-h cuehd','Cues')+`<div class="cuebox">${cl.length?cl.map(({c,ci})=>`<button class="cueline" data-ec="${idx}:${ci}">${esc(c)}</button>`).join(''):'<div class="cuenone">Noch keine eigenen Cues.</div>'}${e.tags.filter(t=>pzHas(t)&&(PRINZIP[t]||[]).length).map(t=>`<div class="cuetag">${esc(t)}</div>${(PRINZIP[t]||[]).map((c,ci)=>`<button class="cueline p" data-pc="${t}:${ci}">${esc(c)}</button>`).join('')}`).join('')}</div>`;
     return `<div class="ex ${it.r?'done':''} ${it.skip?'skipped':''} ${it.open?'open':''}" data-i="${idx}"><span class="swhint l">überspringen</span><span class="swhint r">doch machen</span>
       <div class="head"><div class="name"><button class="nm" data-tog="${idx}"><b>${esc(e.name)}${it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b></button><small><button class="chip sm dose ${it.d&&!sameDose(it.d,e.d)?'dev':''}" data-dose="${idx}">${doseStr(it.d||e.d)}${it.d&&!sameDose(it.d,e.d)?' · geändert':''} ✎</button>${e.side==='getrennt'?`<span class="sidet"> · ${it.side==='L'?'nur links':it.side==='R'?'nur rechts':'beide Seiten'}</span>`:''}${cnt}${!it.open&&it.rt&&it.rt.nach?'<span style="color:var(--ink2)"> · Retest</span>':''}${it.skip?' · übersprungen':''}</small></div>
         <div class="rate"><button data-r="1" class="${it.r?'on':''}" title="gemacht" aria-pressed="${!!it.r}">✓</button><button data-pain class="pain ${it.pain?'on':''}" title="Problem oder Schmerz" aria-pressed="${!!it.pain}">!</button></div></div>
       <div class="body">${it.open?videoBox(e,'tr'):''}${box}${it.open?trNotes(e,it,idx):''}
         ${!it.rt?'':`<div class="rtline"><span>${esc(testShort(it.rt.test))} · ${rtText(it.rt)}</span>${it.rt.nach?`<button class="chip sm" data-rtdel="${idx}">ändern</button>`:`<button class="chip sm" data-rtnach="${idx}">danach messen</button>`}</div>`}
-        <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}${timerOn(it)?`<button class="tmr" data-timerstop="${idx}" aria-label="Timer stoppen">⏱ ${fmtSec(timerLeft())}</button>`:`<button data-timer="${idx}">Timer</button>`}<button data-more="${idx}" aria-label="Mehr: + Cue, überspringen">⋯</button></div>
+        <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}${timerOn(it)?`<button class="tmr" data-timerstop="${idx}" aria-label="Timer stoppen">⏱ ${fmtSec(timerLeft())}</button>`:`<button data-timer="${idx}">Timer</button>`}</div>
       </div></div>`}).join('');
   const done=s.items.filter(i=>i.r).length, total=s.items.filter(i=>!i.skip).length, todo=s.items.filter(exTodo).length;
   main.innerHTML=`<section class="card" id="sesshead"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><b>${esc(s.label)}</b>${s.date!==iso(today)?` <span class="badge">Nachtrag ${dfmt(s.date)}</span>`:''}${s.snapshot!=null?' <span class="badge">fortgesetzt</span>':''}<div class="hint" style="display:flex;align-items:center;gap:8px">${done} von ${total} gemacht · ${durStr(sessMin(s))}${qBtn('haken')}</div></div><button class="btn ghost" id="addEx">+ Übung</button></div>${qHint('haken','Haken = gemacht. „!“ = Problem bei der Ausführung oder Schmerz, schreib kurz dazu, was war. Wirkung misst du mit „Test davor“, die Reaktion später am Tag und am Folgetag zeigt der Kalender.','margin-top:8px')}
@@ -1131,22 +1135,13 @@ function rTraining(){
     if(b.dataset.rt!=null){rtStart(it,render);return}
     if(b.dataset.rtnach!=null){rtAfter(it,render);return}
     if(b.dataset.rtdel!=null){delete it.rt;render();return}
-    if(b.dataset.nadd!=null){it.noteOpen=true;render();noteFocus('tr:'+idx);return}
-    if(b.dataset.nok!=null){noteDoneTr(idx);return}
-    if(b.dataset.more!=null){moreSheet(idx);return}
+    if(b.dataset.nadd!=null){if(b.dataset.nadd.startsWith('cue:')){cueAddOpen(b.dataset.nadd,it.id);return}it.noteOpen=true;render();noteFocus('tr:'+idx);return}
+    if(b.dataset.nok!=null){if(b.dataset.nok.startsWith('cue:')){cueAddDone();return}noteDoneTr(idx);return}
     if(b.dataset.timer!=null){startTimer(it,e);render();return}
     if(b.dataset.timerstop!=null){stopTimer();render();toast('Timer gestoppt');return}
     if(b.dataset.ec){const [i,ci]=b.dataset.ec.split(':').map(Number);cueEditSheet(e.cues[ci],v=>{const arr=[...e.cues];if(v==null)arr.splice(ci,1);else arr[ci]=v;setCues(e,arr);render()});return}
     if(b.dataset.pc){const [t,ci]=b.dataset.pc.split(':');cueEditSheet(PRINZIP[t][+ci],v=>{if(v==null)PRINZIP[t].splice(+ci,1);else PRINZIP[t][+ci]=v;S.prinzip=S.prinzip||{};S.prinzip[t]=PRINZIP[t];save();render()},'Prinzip '+t);return}
   });
-  // „⋯“: seltene Aktionen der offenen Übung in einem kleinen Sheet
-  const newCue=it=>cueNewSheet(exById(it.id),s.date);
-  const moreSheet=idx=>{const it=s.items[idx];const e=exById(it.id);
-    openSheet(`<h3>Mehr · ${esc(e.name)}</h3><div class="stack" id="moreList"><button class="btn ghost wide" data-m="cue">+ Cue</button><button class="btn ghost wide" data-m="skip">${it.skip?'doch machen':'überspringen'}</button></div>`);
-    document.querySelectorAll('#moreList [data-m]').forEach(b=>b.onclick=()=>{const m=b.dataset.m;
-      if(m==='cue'){newCue(it);return}
-      closeSheet();
-      if(m==='skip'){it.skip=!it.skip;if(it.skip){it.r=null;it.t=Date.now();if(it.open)openNext(s.items,idx)}render();toast(it.skip?'Übersprungen':'Doch machen');return}})};
   // Notiz zur Übung: bei jeder Eingabe mitspeichern, ohne neu zu zeichnen (Fokus bleibt)
   list.querySelectorAll('[data-note]').forEach(i=>{i.oninput=e=>{s.items[+i.dataset.note].note=e.target.value;syncSession();save()};
     i.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();noteDoneTr(+i.dataset.note)}}});
@@ -1484,16 +1479,6 @@ function doseSheet(e,after,opts){
       const alt=doseStr(e.d);e.d=nd;S.dose=S.dose||{};S.dose[e.id]=e.d;addEvent(`${e.name}: Dosierung ${alt} → ${doseStr(e.d)}`);save();toast('Dosierung gespeichert');after()};
   }; draw();
 }
-// Neuer Cue an einer Übung (Training und Bibliothekskarte); „stattdessen Prinzip X“ legt den Text als Prinzip-Cue ab (ein Tipp), auch wenn die Liste noch leer ist
-function cueNewSheet(e,dateIso){
-  const tags=e.tags.filter(pzHas);
-  openSheet(`<h3>Neuer Cue</h3><div class="hint">Bezug: ${esc(e.name)}</div><textarea id="cuetxt" placeholder="Was hat die Ausführung verbessert?"></textarea>${tags.length?`<div class="chips">${tags.map(t=>`<button class="chip sm" data-pt="${esc(t)}">stattdessen Prinzip ${esc(t)}</button>`).join('')}</div>`:''}<button class="btn primary wide" id="cuesave">Speichern</button>`);
-  const txt=()=>document.getElementById('cuetxt').value.trim();
-  try{document.getElementById('cuetxt').focus({preventScroll:true})}catch(e){}
-  document.getElementById('cuesave').onclick=()=>{const v=txt();if(v){setCues(e,[...e.cues,v]);ensureDay(dateIso||iso(today)).notes.push({k:'Cue',t:v,b:e.name});toast('Cue gespeichert')}closeSheet();render()};
-  document.querySelectorAll('#sheet [data-pt]').forEach(b=>b.onclick=()=>{const v=txt();if(!v){toast('Text fehlt');return}const t=b.dataset.pt;
-    PRINZIP[t]=PRINZIP[t]||[];PRINZIP[t].push(v);S.prinzip=S.prinzip||{};S.prinzip[t]=PRINZIP[t];ensureDay(dateIso||iso(today)).notes.push({k:'Cue',t:v,b:'Prinzip '+t});save();toast('Prinzip-Cue gespeichert');closeSheet();render()});
-}
 function cueEditSheet(text,cb,bezug){
   openSheet(`<h3>Cue bearbeiten</h3>${bezug?`<div class="hint">${bezug}</div>`:''}<textarea id="cuetxt">${esc(text)}</textarea><div class="row"><button class="btn primary" id="cs">Speichern</button><button class="btn danger" id="cd">Löschen</button></div>`);
   document.getElementById('cs').onclick=()=>{const v=document.getElementById('cuetxt').value.trim();closeSheet();if(v)cb(v)};
@@ -1633,6 +1618,24 @@ const noteInput=(key,val,ph,attr)=>`<div class="nadd"><input type="text" data-ni
 function noteFocus(key){const i=document.querySelector(`[data-ninput="${key}"]`);if(!i)return;try{i.focus()}catch(e){}const n=i.value.length;try{i.setSelectionRange(n,n)}catch(e){}}
 // Karte: offenes Feld je Übung; n ist die beim Schreiben angelegte Notiz in S.exNotes (steht bis „✓“ nur im Feld, nicht in der Liste)
 let BIB_NOTE=null;
+// Cue hinzufügen, im Training und auf der Karte gleich (Wunsch 02.10.2026, wie bei den Notizen): „+“ im Kopf „Cues“ öffnet darunter ein Feld mit „✓“.
+// Der Cue entsteht beim ersten Buchstaben (setCues); „✓“ oder Eingabetaste schließt (Toast, Eintrag im Journal). CUE_NEW = {key, id, i}
+let CUE_NEW=null;
+function cueAddOpen(key,id){if(!(CUE_NEW&&CUE_NEW.key===key))CUE_NEW={key,id,i:null};render();noteFocus(key)}
+function cueAddDone(){const C=CUE_NEW;CUE_NEW=null;let t=null;
+  if(C&&C.i!=null){const e=exById(C.id);if(e&&e.cues[C.i]!=null){const arr=[...e.cues];t=arr[C.i]=arr[C.i].trim();setCues(e,arr);
+    ensureDay(C.key.startsWith('cue:tr:')&&S.session?S.session.date:iso(today)).notes.push({k:'Cue',t,b:e.name});save()}}
+  const a=document.activeElement;if(a&&a.blur)a.blur();render();if(t)toast('Cue gespeichert')}
+function cueInputBind(){const C=CUE_NEW;if(!C)return;const inp=document.querySelector(`[data-ninput="${C.key}"]`);if(!inp)return;const e=exById(C.id);
+  inp.oninput=()=>{const v=inp.value,arr=[...e.cues];
+    if(v.trim()){if(C.i==null){arr.push(v);C.i=arr.length-1}else arr[C.i]=v}else if(C.i!=null){arr.splice(C.i,1);C.i=null}
+    setCues(e,arr)};
+  inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();cueAddDone()}};
+  const ok=inp.parentElement.querySelector('.nok');if(ok){ok.onmousedown=ev=>ev.preventDefault();ok.onclick=ev=>{ev.stopPropagation();cueAddDone()}}}
+const cueHead=(key,cls,lbl)=>`<div class="${cls} nhead"><span${cls==='exsec-h'?' class="ftl"':''}>${lbl}</span>${CUE_NEW&&CUE_NEW.key===key?'':notePlus(key,'Cue hinzufügen')}</div>`
+  +(CUE_NEW&&CUE_NEW.key===key?noteInput(key,CUE_NEW.i!=null?(exById(CUE_NEW.id)||{cues:[]}).cues[CUE_NEW.i]||'':'','Neuer Cue, z. B. Fuß bleibt stabil'):'');
+// eigene Cues ohne den gerade im Feld entstehenden
+const cueListe=(e,key)=>e.cues.map((c,ci)=>({c,ci})).filter(o=>!(CUE_NEW&&CUE_NEW.key===key&&CUE_NEW.i===o.ci));
 function bibNoteDone(){const B=BIB_NOTE;BIB_NOTE=null;if(B&&B.n){B.n.t=B.n.t.trim();save()}const a=document.activeElement;if(a&&a.blur)a.blur();render();if(B&&B.n)toast('Notiz gespeichert')}
 const daysBetween=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);
 
@@ -1687,9 +1690,8 @@ function rBib(){
     ${e.first?`<div class="hint">erstmals am ${e.first}</div>`:''}</div>
     ${S.openEx===e.id?rtRow(e)+notesRow(e):''}
     ${e.video?`<div class="exsec" data-exvideo="${e.id}"><span class="ftl">Video</span>${videoBox(e,'bib')}</div>`:''}
-    <div class="exsec"><span class="ftl">Cues</span>
-    ${e.cues.length?`<div class="sortlist" data-sortcues="${e.id}">${e.cues.map((c,ci)=>`<div class="sortrow">${e.cues.length>1?DRAGH:''}<button class="cue edit" data-bec="${e.id}:${ci}">${esc(c)}</button></div>`).join('')}</div>`:'<div class="hint">Noch keine eigenen Cues.</div>'}
-    <div class="chips"><button class="chip sm" data-addcue="${e.id}">+ Cue</button></div>
+    <div class="exsec">${cueHead('cue:bib:'+e.id,'exsec-h','Cues')}
+    ${(cl=>cl.length?`<div class="sortlist" data-sortcues="${e.id}">${cl.map(({c,ci})=>`<div class="sortrow">${cl.length>1?DRAGH:''}<button class="cue edit" data-bec="${e.id}:${ci}">${esc(c)}</button></div>`).join('')}</div>`:'<div class="hint">Noch keine eigenen Cues.</div>')(cueListe(e,'cue:bib:'+e.id))}
     ${e.tags.filter(pzHas).map(t=>`<details><summary>${esc(t)} · ${(PRINZIP[t]||[]).length} Prinzip-Cues</summary>${(PRINZIP[t]||[]).map(c=>`<div class="cue p">${esc(c)}</div>`).join('')}</details>`).join('')}</div>
     <div class="exsec"><div class="row"><span class="lbl">Status</span><div class="chips">${['aktiv','testphase','geparkt','verworfen'].map(x=>`<button class="chip sm ${st===x?'on':''}" data-st="${e.id}:${x}">${x}</button>`).join('')}</div></div>
     ${ip?`<button class="btn ghost wide" data-rmplan="${e.id}">Aus dem Plan nehmen</button>`:st!=='verworfen'?`<div class="row" style="flex-wrap:nowrap"><button class="btn ghost" style="flex:1" data-toplan="${e.id}">In den Plan</button>${qBtn('toplan')}</div>${qHint('toplan','Testphase: die Übung bleibt gekennzeichnet, bis du sie auf aktiv setzt. Sie darf im Plan stehen.')}`:''}
@@ -1720,7 +1722,7 @@ function rBib(){
   document.querySelectorAll('[data-nedit]').forEach(b=>b.onclick=()=>noteEditSheet(b.dataset.nedit));
   // eigene Cues auf der Karte bearbeiten, löschen und neu anlegen (wie im Training)
   document.querySelectorAll('[data-bec]').forEach(b=>b.onclick=()=>{const [id,ci]=b.dataset.bec.split(':');const e=exById(id);cueEditSheet(e.cues[+ci],v=>{const arr=[...e.cues];if(v==null)arr.splice(+ci,1);else arr[+ci]=v;setCues(e,arr);render()})});
-  document.querySelectorAll('[data-addcue]').forEach(b=>b.onclick=()=>cueNewSheet(exById(b.dataset.addcue)));
+  document.querySelectorAll('[data-nadd^="cue:bib:"]').forEach(b=>b.onclick=()=>cueAddOpen(b.dataset.nadd,b.dataset.nadd.slice(8)));
   // Cues ziehen: neue Reihenfolge gilt überall (Karte und Training), gespeichert wie bearbeitete Cues
   document.querySelectorAll('[data-sortcues]').forEach(l=>sortable(l,(from,to)=>{const e=exById(l.dataset.sortcues);if(!e)return;setCues(e,moveItem(e.cues,from,to));render();toast('Reihenfolge geändert')}));
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{const [id,st]=b.dataset.st.split(':');S.exStatus[id]=st;addEvent(`${exById(id).name}: Status ${st}`);toast('Status geändert');render()});
