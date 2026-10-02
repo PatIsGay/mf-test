@@ -302,14 +302,14 @@
   .exsec-h .tog{text-transform:none;letter-spacing:0;font-size:13px}
   .exsec.ziel{border-top:0;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px}
   .exsec.ziel .exsec-h>span{color:var(--accent)}
-  /* Notizen der Übung im Training, unter den Cues: höchstens 4 sichtbar (trNotesFit), Rest im eigenen Scrollbereich */
+  /* Notizen zur Übung (Karte und Training unter den Cues): höchstens 6 sichtbar (notesFit), Rest im eigenen Scrollbereich; Tipp ändert */
   .trnotes{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
   .trn-h{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:2px}
-  .trn-l{position:relative;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-  .trn-l.more{box-shadow:inset 0 -10px 8px -8px var(--line)}
-  .trn{font-size:13px;line-height:1.35;padding:4px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
-  .trn:last-child{border-bottom:0}
-  .trn .nd{color:var(--ink2);font-weight:600;margin-right:4px;white-space:nowrap}
+  .nlist{display:block;position:relative;min-width:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .nlist.more{box-shadow:inset 0 -10px 8px -8px var(--line)}
+  .nlist .nl{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:4px 0;font:inherit;font-size:13px;line-height:1.35;color:var(--ink);overflow-wrap:anywhere;cursor:pointer}
+  .nlist .nl:first-child{border-top:0}
+  .nlist .nl .nd{color:var(--ink2);font-weight:600;margin-right:4px;white-space:nowrap}
   /* Merksätze in der Rettungskiste: groß lesbar, Akzentstreifen, Datum darunter */
   .merk{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:0 0 8px}
   .merk .mt{display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;font-size:17px;line-height:1.4;font-weight:500;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer}
@@ -322,10 +322,6 @@
   .zchips{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:5px}
   .zchips .zl{font-size:11px;color:var(--ink2);margin-right:2px}
   .zchip{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
-  .nrow .rts{display:flex;flex-direction:column;min-width:0}
-  .nrow .nl{display:block;width:100%;text-align:left;font-size:12px;color:var(--ink);padding:4px 0;border-top:1px solid var(--line2)}
-  .nrow .nl:first-child{border-top:0}
-  .nrow .nl .nd{color:var(--ink2)}
   /* Tests-Sheet: Retests je Test unter der Tabelle, Plan-Version unter den Datumsspalten */
   .rtblock{display:flex;flex-direction:column;margin-top:10px}
   .rtblock .ftl{font-size:11px;line-height:1.25;color:var(--ink2);padding-bottom:2px}
@@ -507,7 +503,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.11';
+const APP_VERSION='1.0.12';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -800,15 +796,16 @@ function render(){
   document.getElementById('subtitle').textContent=`${wd(today)}, ${fmt(today)}${today.getFullYear()}`;
   vidCheck(); const vk=vidKeep();
   ({heute:rHeute,training:rTraining,bib:rBib,kal:rKal})[S.tab]();
-  vidPlace(vk); vidThumbs(); trNotesFit();
+  vidPlace(vk); vidThumbs(); notesFit();
   save();
 }
-// Notizen im Training: Liste endet nach der 4. Notiz (Zeilen können umbrechen, darum gemessen, mit Bruchteilen von Pixeln), Rest per Wischen; Scrollstand bleibt beim Neuzeichnen
-const TRN_SCROLL={};
-function trNotesFit(){document.querySelectorAll('.trn-l').forEach(l=>{const c=l.children;l.style.maxHeight='';
-  const mehr=c.length>4; l.classList.toggle('more',mehr); if(!mehr)return;
-  l.scrollTop=0; l.style.maxHeight=(c[3].getBoundingClientRect().bottom-l.getBoundingClientRect().top)+'px';
-  l.scrollTop=TRN_SCROLL[l.dataset.trn]||0; l.onscroll=()=>{TRN_SCROLL[l.dataset.trn]=l.scrollTop}})}
+// Notizlisten (Karte und Training): Liste endet nach der NOTE_MAX-ten Notiz (Zeilen können umbrechen, darum gemessen, mit Bruchteilen
+// von Pixeln), Rest per Wischen; Scrollstand je Liste bleibt beim Neuzeichnen
+const NOTE_SCROLL={};
+function notesFit(){document.querySelectorAll('.nlist').forEach(l=>{const c=l.children;l.style.maxHeight='';
+  const mehr=c.length>NOTE_MAX; l.classList.toggle('more',mehr); if(!mehr)return;
+  l.scrollTop=0; l.style.maxHeight=(c[NOTE_MAX-1].getBoundingClientRect().bottom-l.getBoundingClientRect().top)+'px';
+  l.scrollTop=NOTE_SCROLL[l.dataset.nlist]||0; l.onscroll=()=>{NOTE_SCROLL[l.dataset.nlist]=l.scrollTop}})}
 
 // ---------- Heute ----------
 function scale(cur,onSel,small){return `<div class="scale">${[...Array(11).keys()].map(v=>`<button class="${v===cur?'on '+cls(v):''}" data-v="${v}">${v}</button>`).join('')}</div>`}
@@ -842,7 +839,6 @@ function rHeute(){
         <div class="hint" style="margin-top:6px">0 kein Schmerz · 3 tolerierbar · 5 sehr beunruhigend · 7 sehr intensiv · 10 unvorstellbar</div></div>
       ${y.eveningDone?'':`<div class="row between"><div class="lbl">Gestern</div><div class="chips">${CHIPS.map(c=>`<button class="chip sm ${y.chips.includes(c)?'on':''}" data-ychip="${c}">${c}</button>`).join('')}</div></div>
       <div class="hint" style="margin-top:-4px">Stress und Sitzen gelten für den Vortag. Für heute in „Später am Tag“.</div>`}
-      <input type="text" id="note" placeholder="Notiz, z. B. unruhig geschlafen" value="${esc(d.note||'')}">
       <button class="btn primary wide" id="saveCheck">Speichern</button>
     </div>
   </section>`;
@@ -854,14 +850,13 @@ function rHeute(){
   // nach dem Speichern eingeklappt wie der Check-in; „ändern“ setzt S.laterOpen
   const abendDone=abendFull&&!!d.eveningDone&&S.laterOpen!==iso(today);
   const abendHtml=abendDone?`<section class="card" id="abendCard"><h2>Später am Tag <span class="badge">erfasst</span></h2>
-    <div class="row between" id="abRow" style="cursor:pointer;flex-wrap:nowrap"><div class="row" style="gap:6px"><span class="hint">Form</span><span class="tf ${cls(d.tfA)}">${d.tfA??'–'}</span><span class="hint">Sympt.</span><span class="sy sytile ${scAC}"${scAC?'':' style="background:var(--surface2)"'}>${fmtN(scA)}</span>${d.chips.length||tagLbl.length?`<span style="font-size:13px;font-weight:600">${[d.chips.map(esc).join(', '),tagLbl.join(', ')].filter(Boolean).join(' · ')}</span>`:''}</div><span class="row" style="gap:8px;flex-wrap:nowrap"><button class="chip sm" id="abNote">+ Notiz</button><button class="tog" id="abEdit" style="font-size:13px">ändern</button></span></div></section>`
+    <div class="row between" id="abRow" style="cursor:pointer;flex-wrap:nowrap"><div class="row" style="gap:6px"><span class="hint">Form</span><span class="tf ${cls(d.tfA)}">${d.tfA??'–'}</span><span class="hint">Sympt.</span><span class="sy sytile ${scAC}"${scAC?'':' style="background:var(--surface2)"'}>${fmtN(scA)}</span>${d.chips.length||tagLbl.length?`<span style="font-size:13px;font-weight:600">${[d.chips.map(esc).join(', '),tagLbl.join(', ')].filter(Boolean).join(' · ')}</span>`:''}</div><button class="tog" id="abEdit" style="font-size:13px">ändern</button></div></section>`
   :abendFull?`<section class="card" id="abendCard"><h2>Später am Tag <span class="badge">optional</span></h2><div class="row between"><div class="lbl">Tagesform jetzt</div><span class="tf ${cls(d.tfA)}">${d.tfA==null?'–':d.tfA}</span></div><div style="margin-top:8px">${scale(d.tfA).replace('class="scale"','class="scale" id="abend"')}</div>
     <div style="margin-top:10px"><div class="row between"><div class="lbl">Symptome jetzt</div><button class="chip sm" id="wieMorgen">wie heute Morgen</button></div>
       <div class="stack" style="margin-top:8px">${symAbend||'<div class="hint">Kein aktives Symptom.</div>'}</div>
       ${scA!=null?`<div class="row" style="margin-top:8px;gap:6px"><span class="hint">Score jetzt</span><span class="sy sytile ${scAC}"${scAC?'':' style="background:var(--surface2)"'}>${fmtN(scA)}</span></div>`:''}</div>
     <div class="row between" style="margin-top:10px"><div class="lbl">Heute</div><div class="chips">${CHIPS.map(c=>`<button class="chip sm ${d.chips.includes(c)?'on':''}" data-chip="${c}">${c}</button>`).join('')}</div></div>
     <div class="row between" style="margin-top:8px;align-items:flex-start"><div class="lbl" style="padding-top:5px">Tag</div><div class="chips" id="tagChips" style="justify-content:flex-end">${tagVis.map(t=>`<button class="chip sm ${tagOn(t)?'on':''}" data-tag="${t}" aria-pressed="${tagOn(t)}">${TYPES[t].l}</button>`).join('')}${tagVis.length<TAG_AKT.length?'<button class="chip sm" id="tagMore">weitere ▸</button>':''}</div></div>
-    <div class="chips" style="margin-top:8px"><button class="chip sm addchip" id="addNote">+ Notiz</button></div>
     <div class="hint" style="margin-top:6px">Eigener Wert für später am Tag, der Morgen bleibt der Kalenderwert. Stress und Sitzen für heute.</div>
     <button class="btn primary wide" style="margin-top:10px" id="saveAbend">Speichern</button></section>`:`<section class="card" id="abendCard"><div class="row between"><h2 style="margin:0">Später am Tag <span class="badge">optional</span></h2><button class="tog" id="abendNow" style="font-size:13px">jetzt zeigen</button></div></section>`;
   // echter Kanal beim Start: Hinweis, wo Plan und Übungen angelegt werden (verschwindet mit dem ersten Block)
@@ -895,8 +890,7 @@ function rHeute(){
       if(y.sleep!=null)d.sleep=y.sleep; if(y.sq)d.sq=y.sq;
       toast('Symptome und Schlaf wie gestern');render()};
     document.querySelectorAll('[data-ychip]').forEach(b=>b.onclick=()=>{const c=b.dataset.ychip;y.chips=y.chips.includes(c)?y.chips.filter(x=>x!==c):[...y.chips,c];render()});
-    document.getElementById('note').onchange=e=>{d.note=e.target.value;save()};
-    document.getElementById('saveCheck').onclick=()=>{d.note=document.getElementById('note').value;if(d.tf==null){toast('Tagesform fehlt noch');return}if(d.sleep==null)d.sleep=slShow;if(d.sq==null)d.sq=sqShow;d.checkedIn=true;S.checkinOpen=false;render();toast('Check-in gespeichert');window.scrollTo({top:0,behavior:'smooth'})};
+    document.getElementById('saveCheck').onclick=()=>{if(d.tf==null){toast('Tagesform fehlt noch');return}if(d.sleep==null)d.sleep=slShow;if(d.sq==null)d.sq=sqShow;d.checkedIn=true;S.checkinOpen=false;render();toast('Check-in gespeichert');window.scrollTo({top:0,behavior:'smooth'})};
   }
   document.querySelectorAll('[data-chip]').forEach(b=>b.onclick=()=>{const c=b.dataset.chip;d.chips=d.chips.includes(c)?d.chips.filter(x=>x!==c):[...d.chips,c];render()});
   const ab=document.getElementById('abend'); if(ab)ab.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;d.tfA=+b.dataset.v;render()});
@@ -906,8 +900,7 @@ function rHeute(){
   const sa=document.getElementById('saveAbend'); if(sa)sa.onclick=()=>{if(!d.syA)d.syA={};symRows(d).forEach(s=>{const v=syVal(d,s.id);if(d.syA[s.id]==null&&v!=null)d.syA[s.id]=v});d.eveningDone=true;S.laterOpen=false;save();render();toast('Später am Tag gespeichert');
     // die Seite wird kürzer; die zugeklappte Zeile soll im Bild bleiben (unter der festen Kopfzeile)
     const ac=document.getElementById('abendCard');if(ac){const r=ac.getBoundingClientRect(),h=document.querySelector('.top').offsetHeight;if(r.top<h||r.bottom>innerHeight)window.scrollTo({top:Math.max(0,scrollY+r.top-h-8),behavior:'smooth'})}};
-  const abr=document.getElementById('abRow'); if(abr)abr.onclick=e=>{if(e.target.closest('#abNote'))return;S.laterOpen=iso(today);render()};
-  const abn=document.getElementById('abNote'); if(abn)abn.onclick=e=>{e.stopPropagation();noteSheet()};
+  const abr=document.getElementById('abRow'); if(abr)abr.onclick=()=>{S.laterOpen=iso(today);render()};
   document.querySelectorAll('[data-ycont]').forEach(b=>b.onclick=()=>{startSession(b.dataset.ycont,iso(addD(today,-1)));setTab('training')});
   // Tag-Chips: Tipp schaltet für heute ein oder aus; Bürotag und halber Bürotag schließen sich aus
   document.querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{const t=b.dataset.tag;const on=tagOn(t);
@@ -915,7 +908,6 @@ function rHeute(){
     for(let i=d.done.length-1;i>=0;i--)if(weg(d.done[i]))d.done.splice(i,1);
     if(!on)d.done.push(t==='Kochen'?{type:'Kochen',dur:120,int:'mittel'}:{type:t});render()});
   const tm=document.getElementById('tagMore'); if(tm)tm.onclick=()=>{tagMore=true;render()};
-  const an2=document.getElementById('addNote'); if(an2)an2.onclick=()=>noteSheet();
   document.getElementById('openRett').onclick=()=>rettSheet();
   const tp=document.getElementById('toPlan'); if(tp)tp.onclick=()=>{setTab('bib');openBibSheet('plan')};
   const bk=document.getElementById('bkRow'); if(bk)bk.onclick=()=>{exportData();render()};
@@ -1061,9 +1053,9 @@ function rTraining(){
     return;
   }
   const curEntry=(i=>i>=0?S.days[s.date].done[i]:null)(S.days[s.date]?findEntry(s.date,s.block):-1);
-  // Notizen der Übung unter den Cues (nur offene Übung, nur lesen): höchstens 4 sichtbar, weitere im eigenen Scrollbereich (trNotesFit)
+  // Notizen zur Übung unter den Cues (nur offene Übung): höchstens NOTE_MAX sichtbar, weitere im eigenen Scrollbereich (notesFit); Tipp ändert oder löscht
   const trNotes=e=>{const all=exNoteList(e.id,curEntry);if(!all.length)return '';
-    return `<div class="trnotes"><div class="trn-h">Notizen${all.length>4?` · ${all.length}`:''}</div><div class="trn-l" data-trn="${e.id}">${all.map(o=>`<div class="trn"><span class="nd">${dfmt(o.d)}</span> ${esc(o.t)}${o.i==null?' <span class="badge">Einheit</span>':''}</div>`).join('')}</div></div>`};
+    return `<div class="trnotes"><div class="trn-h">Notizen${all.length>NOTE_MAX?` · ${all.length}`:''}</div>${noteListHtml(all,'tr:'+e.id)}</div>`};
   const rows=s.items.map((it,idx)=>{const e=exById(it.id);
     // Zugeklappt nur die Anzahl eigener Cues; aufgeklappt eigene und Prinzip-Cues vollständig im Kasten
     const nc=e.cues.length, cnt=it.open?'':`<span class="cuecnt"> · ${nc?nc+(nc===1?' Cue':' Cues'):'keine Cues'}</span>`;
@@ -1074,13 +1066,11 @@ function rTraining(){
       <div class="body">${it.open?videoBox(e,'tr'):''}${box}${it.open?trNotes(e):''}
         ${!it.rt?'':`<div class="rtline"><span>${esc(testShort(it.rt.test))} · ${rtText(it.rt)}</span>${it.rt.nach?`<button class="chip sm" data-rtdel="${idx}">ändern</button>`:`<button class="chip sm" data-rtnach="${idx}">danach messen</button>`}</div>`}
         <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}${timerOn(it)?`<button class="tmr" data-timerstop="${idx}" aria-label="Timer stoppen">⏱ ${fmtSec(timerLeft())}</button>`:`<button data-timer="${idx}">Timer</button>`}<button data-notetog="${idx}" aria-pressed="${!!(it.noteOpen||it.note||it.pain)}">Notiz</button><button data-more="${idx}" aria-label="Mehr: + Cue, überspringen">⋯</button></div>
-        ${it.noteOpen||it.note||it.pain?`<input type="text" placeholder="${it.pain?'Was war? z. B. Ziehen rechts, Fuß gerutscht':'Kurznotiz, z. B. nur rechts super'}" value="${esc(it.note||'')}" data-note="${idx}">`:''}
+        ${it.noteOpen||it.note||it.pain?`<input type="text" placeholder="${it.pain?'Was war? z. B. Ziehen rechts, Fuß gerutscht':'Notiz zur Übung, z. B. nur rechts super'}" value="${esc(it.note||'')}" data-note="${idx}">`:''}
       </div></div>`}).join('');
   const done=s.items.filter(i=>i.r).length, total=s.items.filter(i=>!i.skip).length, todo=s.items.filter(exTodo).length;
-  const noteShow=!!(s.noteOpen||s.note);
   main.innerHTML=`<section class="card" id="sesshead"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><b>${esc(s.label)}</b>${s.date!==iso(today)?` <span class="badge">Nachtrag ${dfmt(s.date)}</span>`:''}${s.snapshot!=null?' <span class="badge">fortgesetzt</span>':''}<div class="hint" style="display:flex;align-items:center;gap:8px">${done} von ${total} gemacht · ${durStr(sessMin(s))}${qBtn('haken')}</div></div><button class="btn ghost" id="addEx">+ Übung</button></div>${qHint('haken','Haken = gemacht. „!“ = Problem bei der Ausführung oder Schmerz, schreib kurz dazu, was war. Wirkung misst du mit „Test davor“, die Reaktion später am Tag und am Folgetag zeigt der Kalender.','margin-top:8px')}
-    <div class="row between" style="margin-top:4px;flex-wrap:nowrap"><button class="tog" id="snoteTog" aria-pressed="${noteShow}" style="font-size:13px;font-weight:600;color:var(--ink2)">Notiz</button><button class="tog danger" id="abort">Verwerfen</button></div>
-    ${noteShow?`<input type="text" id="snote" style="margin-top:8px" placeholder="Notiz zur Einheit, z. B. eilig, nur Hälfte" value="${esc(s.note||'')}">`:''}</section>
+    <div class="row" style="margin-top:4px;justify-content:flex-end"><button class="tog danger" id="abort">Verwerfen</button></div></section>
   <section class="card"><div class="list" id="exlist">${rows}</div></section>
   <div id="sessbar"><button class="btn primary" id="fin">${todo?`Fertig · ${todo} offen`:'Fertig'}</button></div>`;
   const list=document.getElementById('exlist');
@@ -1097,7 +1087,7 @@ function rTraining(){
     const b=ev.target.closest('button'); const row=ev.target.closest('.ex'); if(!row) return; const idx=+row.dataset.i; const it=s.items[idx];
     // Tipp in die Kopfzeile außerhalb der Knöpfe (oder auf den Namen) klappt auf oder zu; nur eine Übung offen
     if((!b||b.classList.contains('nm'))&&ev.target.closest('.head')){const o=!it.open;s.items.forEach(x=>x.open=false);it.open=o;render();return}
-    if(!b) return; const e=exById(it.id);
+    if(!b) return; if(b.dataset.nedit!=null){noteEditSheet(b.dataset.nedit);return} const e=exById(it.id);
     if(b.dataset.dose!=null){doseSheet(e,render,{session:it});return}
     if(b.dataset.r){it.r=it.r?null:1;it.skip=false;it.t=it.r?Date.now():null;if(it.r&&it.open)openNext(s.items,idx);render();return}
     // „!“: Ausnahme setzen, gilt zugleich als gemacht; Übung bleibt bzw. wird offen, Fokus in die Kurznotiz. Erneuter Tipp hebt nur die Ausnahme auf.
@@ -1122,10 +1112,8 @@ function rTraining(){
       if(m==='cue'){newCue(it);return}
       closeSheet();
       if(m==='skip'){it.skip=!it.skip;if(it.skip){it.r=null;it.t=Date.now();if(it.open)openNext(s.items,idx)}render();toast(it.skip?'Übersprungen':'Doch machen');return}})};
-  // Kurznotizen und Notiz zur Einheit: bei jeder Eingabe mitspeichern, ohne neu zu zeichnen (Fokus bleibt)
+  // Notiz zur Übung: bei jeder Eingabe mitspeichern, ohne neu zu zeichnen (Fokus bleibt)
   list.querySelectorAll('[data-note]').forEach(i=>i.oninput=e=>{s.items[+i.dataset.note].note=e.target.value;syncSession();save()});
-  const sn=document.getElementById('snote'); if(sn)sn.oninput=e=>{s.note=e.target.value;syncSession();save()};
-  document.getElementById('snoteTog').onclick=()=>{if(s.note){if(sn)sn.focus();return}s.noteOpen=!s.noteOpen;render();const i=document.getElementById('snote');if(i)i.focus()};
   // + Übung: bei getrennter Übung zuerst die Seite wählen (wie „In den Plan“), dann Testphase wie bisher
   document.getElementById('addEx').onclick=()=>pickExercise((id,test)=>{const ex=exById(id);
     const add=side=>{s.items.push({id,extra:true,side});if(test&&!inPlan(id)&&exStatus(ex)!=='testphase'){S.exStatus[id]='testphase';addEvent(ex.name+': Status Testphase (im Training)');toast('Als Testphase markiert')}render()};
@@ -1579,11 +1567,28 @@ function blockSheet(id,after){
 }
 const sideLbl=sd=>sd==='L'?' · nur links':sd==='R'?' · nur rechts':sd==='beide'?' · L/R':'';
 const dfmt=k=>fmt(new Date(k+'T12:00:00'));
-// Notizen einer Übung: datierte Notizen (S.exNotes, i = Index) und Kurznotizen aus Einheiten, neueste oben.
-// skip: Eintrag der laufenden Einheit, deren Kurznotiz im Training schon im Eingabefeld steht
+// Notizen zur Übung, eine Art (Entscheidung 02.10.2026): auf der Karte geschrieben (S.exNotes, i = Index) oder im Training
+// (Notiz in der Einheit, S.days[k].done[ai].ex[ii].note); gemeinsam neueste oben. ref verweist auf die Stelle (noteRef).
+// skip: Eintrag der laufenden Einheit, deren Notiz im Training schon im Eingabefeld steht
 const exNoteList=(id,skip)=>{const ns=(S.exNotes||{})[id]||[];
-  const un=[];Object.keys(S.days).forEach(k=>(S.days[k].done||[]).forEach(a=>{if(a===skip)return;(a.ex||[]).forEach(i=>{if(i.id===id&&i.note)un.push({d:k,t:i.note})})}));
-  return [...ns.map((n,i)=>({d:n.d,t:n.t,i})),...un].sort((a,b)=>b.d.localeCompare(a.d)||(a.i==null)-(b.i==null)||(b.i??0)-(a.i??0))};
+  const un=[];Object.keys(S.days).forEach(k=>(S.days[k].done||[]).forEach((a,ai)=>{if(a===skip)return;(a.ex||[]).forEach((i,ii)=>{if(i.id===id&&i.note)un.push({d:k,t:i.note,ref:`d:${k}:${ai}:${ii}`})})}));
+  return [...ns.map((n,i)=>({d:n.d,t:n.t,i,ref:`n:${id}:${i}`})),...un].sort((a,b)=>b.d.localeCompare(a.d)||(a.i==null)-(b.i==null)||(b.i??0)-(a.i??0))};
+// Notizliste (Karte und Training): Datum und Text, Tipp öffnet Ändern/Löschen; ab NOTE_MAX Notizen eigener Scrollbereich (notesFit)
+const NOTE_MAX=6;
+const noteListHtml=(all,key)=>`<div class="nlist" data-nlist="${key}">${all.map(o=>`<button class="nl" data-nedit="${o.ref}"><span class="nd">${dfmt(o.d)}</span> ${esc(o.t)}</button>`).join('')}</div>`;
+// Verweis auflösen; eine Notiz der laufenden Einheit wird auch in S.session geändert, sonst schriebe syncSession den alten Stand zurück
+function noteRef(ref){const p=String(ref).split(':');
+  if(p[0]==='n'){const ns=(S.exNotes||{})[p[1]],n=ns&&ns[+p[2]];
+    return n?{id:p[1],d:n.d,t:n.t,set:v=>{n.t=v},del:()=>{ns.splice(+p[2],1);if(!ns.length)delete S.exNotes[p[1]]}}:null}
+  const k=p[1],ai=+p[2],ii=+p[3],a=S.days[k]&&S.days[k].done[ai],it=a&&a.ex&&a.ex[ii]; if(!it||!it.note)return null;
+  const s=S.session,live=s&&s.date===k&&findEntry(k,s.block)===ai&&s.items[ii]&&s.items[ii].id===it.id?s.items[ii]:null;
+  return {id:it.id,d:k,t:it.note,set:v=>{it.note=v;if(live)live.note=v},del:()=>{delete it.note;if(live){delete live.note;live.noteOpen=false}}};
+}
+function noteEditSheet(ref){const r=noteRef(ref); if(!r)return; const e=exById(r.id);
+  openSheet(`<h3>Notiz vom ${dfmt(r.d)}</h3><div class="hint">Bezug: ${esc(e?e.name:'')}</div><textarea id="exnt">${esc(r.t)}</textarea><div class="row"><button class="btn primary" id="exns">Speichern</button><button class="btn danger" id="exnd">Löschen</button></div>`);
+  document.getElementById('exns').onclick=()=>{const v=document.getElementById('exnt').value.trim();if(v&&v!==r.t){r.set(v);toast('Notiz gespeichert')}closeSheet();render()};
+  document.getElementById('exnd').onclick=()=>{r.del();closeSheet();toast('Notiz gelöscht');render()};
+}
 const daysBetween=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);
 
 // ---------- Bibliothek ----------
@@ -1613,7 +1618,7 @@ function rBib(){
   const bilKachel=(e,m,n,l)=>{const an=BILMODE[e.id]===m, leer=!bilTage(e,m).length;return `<button class="bil" data-bil="${e.id}:${m}" aria-pressed="${an&&!leer}"${leer?' disabled':''}><b>${n}</b><small>${l}</small></button>`};
   // datierte Notizen je Übung (S.exNotes) und Kurznotizen aus Einheiten, gemeinsam neueste oben; Tipp auf eine eigene Notiz öffnet Bearbeiten/Löschen, Kurznotizen nur Anzeige
   const notesRow=e=>{const all=exNoteList(e.id);
-    return `<div class="nrow exsec"><span class="ftl">Notizen</span>${all.length?`<div class="rts">${all.map(o=>o.i!=null?`<button class="nl" data-exnote="${e.id}:${o.i}"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)}</button>`:`<div class="nl"><span class="nd">${dfmt(o.d)} ·</span> ${esc(o.t)} <span class="badge">Einheit</span></div>`).join('')}</div>`:''}`
+    return `<div class="nrow exsec"><span class="ftl">Notizen${all.length>NOTE_MAX?' · '+all.length:''}</span>${all.length?noteListHtml(all,'bib:'+e.id):''}`
       +`<div class="chips"><button class="chip sm" data-addnote="${e.id}">+ Notiz</button></div></div>`};
   // „Soll verbessern“: Tests der Übung mit Ziel und letztem Wert, oben auf der Karte; „ändern“ öffnet die Auswahl wie im Plan
   const zielSec=e=>{const ts=exTests(e.id);
@@ -1652,14 +1657,11 @@ function rBib(){
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.openEx=S.openEx===b.dataset.open?null:b.dataset.open;render()});
   document.querySelectorAll('[data-rtday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.rtday));
   document.querySelectorAll('[data-exday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.exday));
-  // Notizen je Übung: neu anlegen mit heutigem Datum, bearbeiten oder löschen
+  // Notizen zur Übung: neu anlegen mit heutigem Datum; Ändern und Löschen über noteEditSheet (auch im Training)
   document.querySelectorAll('[data-addnote]').forEach(b=>b.onclick=()=>{const e=exById(b.dataset.addnote);
     openSheet(`<h3>Notiz zu ${esc(e.name)}</h3><textarea id="exnt" placeholder="Beobachtung, Verdacht, Entscheidung"></textarea><button class="btn primary wide" id="exns">Speichern</button>`);
     document.getElementById('exns').onclick=()=>{const v=document.getElementById('exnt').value.trim();if(v){S.exNotes=S.exNotes||{};(S.exNotes[e.id]=S.exNotes[e.id]||[]).push({d:iso(today),t:v});toast('Notiz gespeichert')}closeSheet();render()}});
-  document.querySelectorAll('[data-exnote]').forEach(b=>b.onclick=()=>{const [id,ni]=b.dataset.exnote.split(':');const e=exById(id);const ns=S.exNotes[id];const n=ns[+ni];
-    openSheet(`<h3>Notiz vom ${dfmt(n.d)}</h3><div class="hint">Bezug: ${esc(e.name)}</div><textarea id="exnt">${esc(n.t)}</textarea><div class="row"><button class="btn primary" id="exns">Speichern</button><button class="btn danger" id="exnd">Löschen</button></div>`);
-    document.getElementById('exns').onclick=()=>{const v=document.getElementById('exnt').value.trim();if(v&&v!==n.t){n.t=v;toast('Notiz gespeichert')}closeSheet();render()};
-    document.getElementById('exnd').onclick=()=>{ns.splice(+ni,1);if(!ns.length)delete S.exNotes[id];closeSheet();toast('Notiz gelöscht');render()}});
+  document.querySelectorAll('[data-nedit]').forEach(b=>b.onclick=()=>noteEditSheet(b.dataset.nedit));
   // eigene Cues auf der Karte bearbeiten, löschen und neu anlegen (wie im Training)
   document.querySelectorAll('[data-bec]').forEach(b=>b.onclick=()=>{const [id,ci]=b.dataset.bec.split(':');const e=exById(id);cueEditSheet(e.cues[+ci],v=>{const arr=[...e.cues];if(v==null)arr.splice(+ci,1);else arr[+ci]=v;setCues(e,arr);render()})});
   document.querySelectorAll('[data-addcue]').forEach(b=>b.onclick=()=>cueNewSheet(exById(b.dataset.addcue)));
@@ -1995,19 +1997,6 @@ function daySheet(k){
 }
 
 // ---------- Notiz, Aktivität, Rettung, Tests ----------
-const NOTE_HINT='Erscheint im Tagesdetail des Kalenders und unter Notizen ohne Bezug in der Bibliothek. Cues legst du direkt an der Übung an.';
-const MERK_HINT='Kommt mit heutigem Datum in die Rettungskiste (oben unter Merksätze) und ins Tagesdetail.';
-function noteSheet(){
-  openSheet(`<h3>Notiz</h3><textarea id="nt" placeholder="Was ist dir aufgefallen?"></textarea><div class="chips"><button class="chip sm" id="ntMerk" aria-pressed="false">Merksatz</button></div><div class="hint" id="ntHint">${NOTE_HINT}</div><button class="btn primary wide" id="ns">Speichern</button>`);
-  // Fokus ins Textfeld: das Sheet dient nur dem Schreiben (spart einen Tipp)
-  try{document.getElementById('nt').focus({preventScroll:true})}catch(e){}
-  // „Merksatz“ ist ein optionaler Schalter; mousedown abfangen, damit der Fokus (und die Tastatur) im Textfeld bleibt
-  const mk=document.getElementById('ntMerk'); mk.onmousedown=e=>e.preventDefault();
-  mk.onclick=()=>{const on=!mk.classList.contains('on');mk.classList.toggle('on',on);mk.setAttribute('aria-pressed',String(on));document.getElementById('ntHint').textContent=on?MERK_HINT:NOTE_HINT};
-  document.getElementById('ns').onclick=()=>{const v=document.getElementById('nt').value.trim();if(!v)return;
-    if(mk.classList.contains('on')){addMerksatz(v);closeSheet();toast('Merksatz gespeichert');render();return}
-    S.inbox.push({t:v,d:fmt(today)});D().notes.push({k:'Notiz',t:v,b:'Inbox'});closeSheet();toast('Gespeichert');render()};
-}
 function aktSheet(dateIso,preType){
   let type=preType&&TYPES[preType]?preType:'Tennis',dur=type==='Laufen'?60:type==='Kochen'?120:90,int='mittel',more=false; const dk=typeof dateIso==='string'?dateIso:iso(today);
   // ausgeblendete Kalenderzeilen Büro/Kochen: Typen erst über „weitere ▸“
