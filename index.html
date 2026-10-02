@@ -319,6 +319,14 @@
   .nlist .nl{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:4px 0;font:inherit;font-size:13px;line-height:1.35;color:var(--ink);overflow-wrap:anywhere;cursor:pointer}
   .nlist .nl:first-child{border-top:0}
   .nlist .nl .nd{color:var(--ink2);font-weight:600;margin-right:4px;white-space:nowrap}
+  /* Prinzipien in der Rettungskiste: je Tag eingeklappt, Cues wie Notizzeilen, „+“ darunter */
+  .pzt{border-top:1px solid var(--line);padding:6px 0}
+  .pzt:first-child{border-top:0}
+  .pzt summary{font-size:14px;color:var(--ink);font-weight:600;padding:4px 0}
+  .pzt .pzn{color:var(--ink2);font-weight:400}
+  .pzl .pzc{display:block;width:100%;text-align:left;font-size:13px;line-height:1.35;color:var(--ink);padding:5px 0 5px 12px;border-top:1px solid var(--line2);overflow-wrap:anywhere}
+  .pzl .pzc:first-child{border-top:0}
+  .pzadd{padding:4px 0 2px 12px}
   /* Merksätze in der Rettungskiste: groß lesbar, Akzentstreifen, Datum darunter */
   .merk{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:0 0 8px}
   .merk .mt{display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;font-size:17px;line-height:1.4;font-weight:500;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer}
@@ -512,7 +520,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.15';
+const APP_VERSION='1.0.16';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -1659,7 +1667,7 @@ function rBib(){
         return `<div class="zrow"><b>${esc(goalName(t))}</b>${pr}${t.side!=='b'?` <span class="zps">(${planSideLbl(ps)})</span>`:''}`
           +ss.map(x=>{const k={test:t.test,side:x},z=zielOf(k);return `<div class="zw">${x==='l'?'links':'rechts'}: ${z?nw('Ziel '+goalVal(z.test,z.target))+' · ':''}${nw(goalLast(k))}</div>`}).join('')+`</div>`}).join(''):'<div class="zleer">Noch nichts gewählt.</div>')+`</div>`};
   // zugeklappt: Ziel-Kästchen unter dem Namen (aufgeklappt zeigt der Abschnitt die Einzelheiten, nichts doppelt)
-  const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${ts.map(t=>`<span class="zchip">${esc(SEITE_FOLGT.includes(t.side)?sideName(t.test,intentSides(t,planSides(e.id))):goalName(t))}</span>`).join('')}</span>`:''};
+  const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${ts.map(t=>`<span class="zchip">${esc(goalName(t))}</span>`).join('')}</span>`:''};
   // leere Bibliothek (echter Kanal beim Start): nur Hinweis und „+ Neue Übung“, ohne Suche und Filter
   const leer=!EX.length;
   main.innerHTML=nav+inb+(leer?'':`<input type="text" id="q" placeholder="Suchen, auch Spitznamen"><div class="chips">${[['alle','Alle'],['K','Korrektiv'],['I','Intensiv'],['test','Testphase'],['geparkt','Geparkt']].map(([k,l])=>`<button class="chip sm ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}</div>`)+`
@@ -2254,16 +2262,39 @@ function rettArtFelder(chips,ti,tx,tm){
   document.querySelectorAll(`#${chips} .chip`).forEach(c=>c.onclick=()=>{document.querySelectorAll(`#${chips} .chip`).forEach(x=>x.classList.remove('on'));c.classList.add('on');set(c.dataset.a)});
   const on=document.querySelector(`#${chips} .chip.on`); if(on)set(on.dataset.a);
 }
+// Prinzip-Cues zentral in der Rettungskiste (Wunsch 02.10.2026): je Prinzip-Tag eingeklappt (offene merkt RETT_PZ für die Sitzung);
+// „+“ öffnet ein Feld mit „✓“ (speichert bei jeder Eingabe), Tipp auf einen Cue ändert oder löscht ihn (cueEditSheet)
+const RETT_PZ=new Set();
+const savePrinzip=t=>{S.prinzip=S.prinzip||{};S.prinzip[t]=PRINZIP[t];save()};
+function rettKeep(){const st=sheet.scrollTop;rettSheet();sheet.scrollTop=st}
+function rettPzHtml(){return PRINZIP_TAGS.map(t=>{const cs=PRINZIP[t]||[];
+  return `<details class="pzt" data-pzt="${esc(t)}"${RETT_PZ.has(t)?' open':''}><summary>${esc(t)} <span class="pzn">· ${cs.length}</span></summary>`
+    +`<div class="pzl">${cs.map((c,ci)=>`<button class="pzc" data-pzc="${esc(t)}:${ci}">${esc(c)}</button>`).join('')}</div>`
+    +`<div class="pzadd">${notePlus('pz:'+t)}</div></details>`}).join('')}
 function rettSheet(){
   const d=D(); const R=S.rettung=S.rettung||[]; const hp=id=>(d.helped||[]).includes(id);
   const M=R.filter(r=>r.a==='Merksatz').sort((a,b)=>(b.d||'').localeCompare(a.d||'')), E=R.filter(r=>r.a!=='Merksatz');
   const merk=M.map(r=>`<div class="merk"><button class="mt" data-redit="${esc(r.id)}">${esc(r.t)}</button><div class="mf"><span class="md">${r.d?merkDatum(r.d):''}${hp(r.id)?' · <span style="color:var(--accent)">✓ heute geholfen</span>':''}</span><button class="chip sm" data-h="${esc(r.id)}">hat geholfen</button></div></div>`).join('');
   const list=E.map(r=>`<div class="item"><span class="badge">${esc(r.a)}</span><button class="t" style="text-align:left" data-redit="${esc(r.id)}"><b>${esc(r.t)}</b><small>${esc(r.x||'')}</small>${hp(r.id)?'<small style="color:var(--accent)">✓ heute geholfen</small>':''}</button><button class="chip sm" data-h="${esc(r.id)}">hat geholfen</button></div>`).join('');
-  openSheet(`<h3>Rettungskiste</h3><div class="hint">Was an schlechten Tagen geholfen hat. Kein Übungsbezug nötig. Tipp auf einen Eintrag ändert ihn.</div>${M.length?`<div class="lbl">Merksätze</div><div id="merkList">${merk}</div>`:''}${M.length&&E.length?'<div class="lbl">Weitere Einträge</div>':''}${E.length||!M.length?`<div class="list" id="rettList">${list||'<div class="hint" id="rettEmpty">Noch kein Eintrag. Lege unten an, was an schlechten Tagen hilft.</div>'}</div>`:''}
+  openSheet(`<h3>Rettungskiste</h3><div class="hint">Was an schlechten Tagen geholfen hat. Kein Übungsbezug nötig. Tipp auf einen Eintrag ändert ihn.</div>${M.length?`<div class="lbl">Merksätze</div><div id="merkList">${merk}</div>`:''}<div class="lbl">Prinzipien</div><div id="pzList">${rettPzHtml()}</div>${E.length?'<div class="lbl">Weitere Einträge</div>':''}${E.length||!M.length?`<div class="list" id="rettList">${list||'<div class="hint" id="rettEmpty">Noch kein Eintrag. Lege unten an, was an schlechten Tagen hilft.</div>'}</div>`:''}
   <div class="lbl">Neuer Eintrag</div><input type="text" id="rt" placeholder="Titel"><div class="chips" id="ra">${RETT_ARTEN.map((a,j)=>`<button class="chip sm ${j===1?'on':''}" data-a="${a}">${a}</button>`).join('')}</div><textarea id="rm" placeholder="Merksatz"></textarea><textarea id="rx" placeholder="Was genau hilft?"></textarea><button class="btn ghost wide" id="rs">Eintrag speichern</button>`);
   document.querySelectorAll('#sheet [data-h]').forEach(b=>b.onclick=()=>{const id=b.dataset.h;const r=R.find(x=>x.id===id);if(!r)return;d.helped=(d.helped||[]).filter(x=>typeof x==='string');if(!d.helped.includes(id)){d.helped.push(id);d.notes.push({k:'Rettung',t:r.t+' hat geholfen',b:'Rettungskiste'})}save();toast('Im Tag notiert');rettSheet()});
   document.querySelectorAll('#sheet [data-redit]').forEach(b=>b.onclick=()=>rettEditSheet(b.dataset.redit));
   rettArtFelder('ra','rt','rx','rm');
+  document.querySelectorAll('#pzList details').forEach(dt=>dt.ontoggle=()=>{const t=dt.dataset.pzt;if(dt.open)RETT_PZ.add(t);else RETT_PZ.delete(t)});
+  document.querySelectorAll('#pzList [data-pzc]').forEach(b=>b.onclick=()=>{const i=b.dataset.pzc.lastIndexOf(':'),t=b.dataset.pzc.slice(0,i),ci=+b.dataset.pzc.slice(i+1);
+    cueEditSheet(PRINZIP[t][ci],v=>{if(v==null)PRINZIP[t].splice(ci,1);else{PRINZIP[t][ci]=v;toast('Prinzip-Cue gespeichert')}savePrinzip(t);rettSheet()},'Prinzip '+t)});
+  // „+“: Feld an Ort und Stelle (ohne Neuzeichnen, die Position im Sheet bleibt); der Cue entsteht beim ersten Buchstaben
+  document.querySelectorAll('#pzList [data-nadd]').forEach(b=>b.onclick=()=>{const t=b.dataset.nadd.slice(3),wrap=b.parentElement;let idx=null;
+    wrap.innerHTML=noteInput('pz:'+t,'','Neuer Prinzip-Cue'); const inp=wrap.querySelector('input'), ok=wrap.querySelector('.nok');
+    inp.oninput=()=>{const v=inp.value;PRINZIP[t]=PRINZIP[t]||[];
+      if(v.trim()){if(idx==null){PRINZIP[t].push(v);idx=PRINZIP[t].length-1}else PRINZIP[t][idx]=v}
+      else if(idx!=null){PRINZIP[t].splice(idx,1);idx=null}
+      savePrinzip(t)};
+    const fertig=()=>{if(idx!=null){PRINZIP[t][idx]=PRINZIP[t][idx].trim();savePrinzip(t);D().notes.push({k:'Cue',t:PRINZIP[t][idx],b:'Prinzip '+t});save()}inp.blur();rettKeep();if(idx!=null)toast('Prinzip-Cue gespeichert')};
+    inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();fertig()}};
+    ok.onmousedown=ev=>ev.preventDefault(); ok.onclick=fertig;
+    noteFocus('pz:'+t)});
   document.getElementById('rs').onclick=()=>{const a=document.querySelector('#ra .chip.on').dataset.a;
     if(a==='Merksatz'){const t=document.getElementById('rm').value.trim();if(!t){toast('Merksatz fehlt');return}addMerksatz(t);toast('Merksatz gespeichert');rettSheet();return}
     const t=document.getElementById('rt').value.trim();if(!t){toast('Titel fehlt');return}R.push({id:newRettId(),t,a,x:document.getElementById('rx').value.trim()});save();toast('Eintrag gespeichert');rettSheet()};
