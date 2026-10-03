@@ -307,6 +307,29 @@
   .trnotes{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
   .trn-h{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:2px}
   .cuehd{margin:2px 0 4px}
+  /* Satzleiste: Kästchen je Satz, blass = offen, kräftig = gemacht; „− +“ darunter */
+  .sethd{margin:8px 0 4px}
+  .sethd .setcnt{font-weight:600}
+  .sets{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+  .set{min-width:62px;min-height:52px;padding:6px 8px;border-radius:12px;border:1.5px dashed var(--line);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-variant-numeric:tabular-nums}
+  .set .v{font-size:18px;font-weight:700;color:var(--ink3);line-height:1.1}
+  .set .u{font-size:11px;color:var(--ink3)}
+  .set .pl{font-size:10.5px;color:var(--ink2)}
+  .set.done{border:1.5px solid var(--accent);background:var(--accent-soft)}
+  .set.done .v{color:var(--ink)}
+  .set.done .u{color:var(--ink2)}
+  .set.edit{box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .set.run{border:1.5px solid var(--accent)}
+  .set.run .v{color:var(--accent)}
+  .setplus{min-width:44px;border-radius:12px;border:1.5px dashed var(--line);color:var(--accent);font-size:20px;font-weight:700}
+  .setstep{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;background:var(--surface2);border-radius:12px;padding:10px 12px;margin-top:8px}
+  .setstep .t{font-size:13px;font-weight:700;color:var(--ink2);min-width:52px}
+  .setstep .sp{display:flex;align-items:center;gap:6px}
+  .setstep .sp button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700}
+  .setstep .sp b{min-width:44px;text-align:center;font-size:19px;font-variant-numeric:tabular-nums}
+  .setstep .sp span{font-size:12px;color:var(--ink2);min-width:26px}
+  .setstep .rm{margin-left:auto;color:var(--g4);font-size:13px;font-weight:700}
+  .setsum{color:var(--ink2)}
   /* Kopf „Notizen“ mit „+“ rechts; Feld zum Hinzufügen direkt darunter, „✓“ im Feld */
   .nhead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px}
   .nplus{position:relative;flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);font:inherit;font-size:16px;font-weight:700;line-height:1;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;justify-content:center;padding:0 0 1px;cursor:pointer}
@@ -525,7 +548,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.18';
+const APP_VERSION='1.0.19';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -828,7 +851,7 @@ function render(){
   document.getElementById('subtitle').textContent=`${wd(today)}, ${fmt(today)}${today.getFullYear()}`;
   vidCheck(); const vk=vidKeep();
   ({heute:rHeute,training:rTraining,bib:rBib,kal:rKal})[S.tab]();
-  vidPlace(vk); vidThumbs(); notesFit(); cueInputBind();
+  vidPlace(vk); vidThumbs(); notesFit(); cueInputBind(); wakeSync();
   save();
 }
 // Notizlisten (Karte und Training): Liste endet nach der NOTE_MAX-ten Notiz (Zeilen können umbrechen, darum gemessen, mit Bruchteilen
@@ -1063,7 +1086,7 @@ function rTraining(){
       const open=S.trOpen===bid;
       const items=bl?[...bl.items.map(([id,,sd])=>({id,sd,it:ent&&ent.ex?ent.ex.find(x=>x.id===id):null})),...(ent&&ent.ex?ent.ex.filter(x=>x.extra&&!bl.items.some(y=>y[0]===x.id)):[]).map(it=>({id:it.id,it}))]:(ent&&ent.ex?ent.ex:[]).map(it=>({id:it.id,it}));
       const list=!open?'':items.map(({id,sd,it})=>{const e=exById(id);const sk=it&&it.skip;const mark=it&&it.r&&!sk?'<span style="color:var(--accent);font-weight:700">✓</span>':'';
-        return `<div class="item" style="padding:6px 0"><div class="t"><b style="font-weight:600${sk?';text-decoration:line-through;color:var(--ink3)':''}">${esc(e.name)}${bl&&it&&it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small${sk?' style="color:var(--ink3)"':''}>${doseStr((it&&it.d)||e.d)}${sideLbl((it&&it.side)||sd)||(e.side==='getrennt'?' · L/R':'')}</small></div>${mark}</div>`}).join('');
+        return `<div class="item" style="padding:6px 0"><div class="t"><b style="font-weight:600${sk?';text-decoration:line-through;color:var(--ink3)':''}">${esc(e.name)}${bl&&it&&it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small${sk?' style="color:var(--ink3)"':''}>${it&&setsDone(it).length?esc(setsStr(it,e)):doseStr((it&&it.d)||e.d)}${sideLbl((it&&it.side)||sd)||(e.side==='getrennt'?' · L/R':'')}</small></div>${mark}</div>`}).join('');
       return `<div class="trrow" data-trrow="${esc(bid)}"><button class="trhead" data-trtog="${esc(bid)}" aria-expanded="${open}"><span class="act ${type}">${type}</span><span class="t"><b>${esc(labelOf(bid))}</b><span class="trst${ok?' ok':''}">${st}</span></span><span class="trarr" aria-hidden="true">${open?'▾':'▸'}</span></button>${open?`<div class="trbody"><div class="list">${list||'<div class="hint">Noch keine Übung.</div>'}</div><button class="btn ${cl} wide" data-go="${esc(bid)}">${btn}</button></div>`:''}</div>`};
     // Sportzeile (Tennis, Laufen): erfasste Einträge als Chips (Tipp → ändern/löschen), „Erfassen“ bleibt, mehrere Einträge erlaubt
     const sportRow=(t,planned)=>{const ents=d.done.map((a,i)=>({a,i})).filter(o=>o.a.type===t&&!o.a.block);
@@ -1094,17 +1117,30 @@ function rTraining(){
   // „✓“ oder Eingabetaste: Feld schließen; die Notiz (schon gespeichert) steht danach oben in der Liste
   const noteDoneTr=idx=>{const it=s.items[idx],i=document.querySelector(`#exlist [data-ninput="tr:${idx}"]`),v=(i?i.value:(it.note||'')).trim();
     if(v)it.note=v;else delete it.note;it.noteOpen=false;if(i)i.blur();render();if(v)toast('Notiz gespeichert')};
-  const rows=s.items.map((it,idx)=>{const e=exById(it.id); if(!it.open)it.noteOpen=false;
+  // Satzleiste der offenen Übung: Kästchen je Satz (blass = offen, kräftig = gemacht), „+“ hängt einen Satz an, darunter bei Auswahl „− +“
+  const setBox=(it,e,idx,o)=>{const d=planD(it,e),run=timerOn(it,o.i),sel=SETEDIT&&SETEDIT.it===it&&SETEDIT.si===o.i,x=o.s;
+    const abw=x&&!o.extra&&(x.n!==d.n||(x.kg??null)!==(d.kg??null));
+    const inner=run?`<span class="v">${fmtSec(timerLeft())}</span><span class="u">■ beenden</span>`
+      :!x&&d.u==='s'?`<span class="v">▶ ${d.n}</span><span class="u">s</span>`
+      :`<span class="v">${x?x.n:d.n}</span><span class="u">${esc(d.u)}${(x?x.kg:d.kg)!=null?' · '+kgStr(x?x.kg:d.kg)+' kg':''}</span>`+(abw?`<span class="pl">Plan ${d.n}${d.kg!=null&&x.kg!==d.kg?' · '+kgStr(d.kg)+' kg':''}</span>`:o.extra&&x?'<span class="pl">extra</span>':'');
+    return `<button class="set${x?' done':''}${sel?' edit':''}${run?' run':''}" data-set="${idx}:${o.i}" aria-label="Satz ${o.i+1}, ${x?'gemacht '+x.n:'geplant '+d.n} ${esc(d.u)}">${inner}</button>`};
+  const setStep=(it,e,idx)=>{if(!SETEDIT||SETEDIT.it!==it)return '';const d=planD(it,e),x=(it.sets||[])[SETEDIT.si];if(!x)return '';const st=d.u==='s'?5:1,ex=SETEDIT.si>=Math.max(1,d.sets||1);
+    return `<div class="setstep"><span class="t">Satz ${SETEDIT.si+1}</span><div class="sp"><button data-setd="n:-${st}" aria-label="weniger">−</button><b>${x.n}</b><span>${esc(d.u)}</span><button data-setd="n:${st}" aria-label="mehr">+</button></div>`
+      +(x.kg!=null?`<div class="sp"><button data-setd="kg:-1" aria-label="weniger Gewicht">−</button><b>${kgStr(x.kg)}</b><span>kg</span><button data-setd="kg:1" aria-label="mehr Gewicht">+</button></div>`:'')
+      +`<button class="rm" data-setd="${ex?'del':'undo'}">${ex?'Satz entfernen':'nicht gemacht'}</button></div>`};
+  const setsSec=(it,e,idx)=>{const sl=setSlots(it,e),n=sl.filter(o=>o.s).length;
+    return `<div class="trn-h nhead sethd"><span>Sätze</span><span class="setcnt">${n} von ${sl.length}</span></div><div class="sets">${sl.map(o=>setBox(it,e,idx,o)).join('')}<button class="setplus" data-setplus="${idx}" aria-label="Satz anhängen">+</button></div>${setStep(it,e,idx)}`};
+  const rows=s.items.map((it,idx)=>{const e=exById(it.id); if(!it.open){it.noteOpen=false;if(SETEDIT&&SETEDIT.it===it)SETEDIT=null}
     // Zugeklappt nur die Anzahl eigener Cues; aufgeklappt eigene und Prinzip-Cues vollständig im Kasten
     const nc=e.cues.length, cnt=it.open?'':`<span class="cuecnt"> · ${nc?nc+(nc===1?' Cue':' Cues'):'keine Cues'}</span>`;
     const ck='cue:tr:'+idx, cl=cueListe(e,ck);
     const box=!it.open?'':cueHead(ck,'trn-h cuehd','Cues')+`<div class="cuebox">${cl.length?cl.map(({c,ci})=>`<button class="cueline" data-ec="${idx}:${ci}">${esc(c)}</button>`).join(''):'<div class="cuenone">Noch keine eigenen Cues.</div>'}${e.tags.filter(t=>pzHas(t)&&(PRINZIP[t]||[]).length).map(t=>`<div class="cuetag">${esc(t)}</div>${(PRINZIP[t]||[]).map((c,ci)=>`<button class="cueline p" data-pc="${t}:${ci}">${esc(c)}</button>`).join('')}`).join('')}</div>`;
     return `<div class="ex ${it.r?'done':''} ${it.skip?'skipped':''} ${it.open?'open':''}" data-i="${idx}"><span class="swhint l">überspringen</span><span class="swhint r">doch machen</span>
-      <div class="head"><div class="name"><button class="nm" data-tog="${idx}"><b>${esc(e.name)}${it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b></button><small><button class="chip sm dose ${it.d&&!sameDose(it.d,e.d)?'dev':''}" data-dose="${idx}">${doseStr(it.d||e.d)}${it.d&&!sameDose(it.d,e.d)?' · geändert':''} ✎</button>${e.side==='getrennt'?`<span class="sidet"> · ${it.side==='L'?'nur links':it.side==='R'?'nur rechts':'beide Seiten'}</span>`:''}${cnt}${!it.open&&it.rt&&it.rt.nach?'<span style="color:var(--ink2)"> · Retest</span>':''}${it.skip?' · übersprungen':''}</small></div>
+      <div class="head"><div class="name"><button class="nm" data-tog="${idx}"><b>${esc(e.name)}${it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b></button><small><span class="dosetxt">${doseStr(planD(it,e))}</span>${e.side==='getrennt'?`<span class="sidet"> · ${it.side==='L'?'nur links':it.side==='R'?'nur rechts':'beide Seiten'}</span>`:''}${cnt}${!it.open&&setsDone(it).length?`<span class="setsum"> · ${setsDone(it).length} von ${setSlots(it,e).length} Sätzen</span>`:''}${!it.open&&it.rt&&it.rt.nach?'<span style="color:var(--ink2)"> · Retest</span>':''}${it.skip?' · übersprungen':''}</small></div>
         <div class="rate"><button data-r="1" class="${it.r?'on':''}" title="gemacht" aria-pressed="${!!it.r}">✓</button><button data-pain class="pain ${it.pain?'on':''}" title="Problem oder Schmerz" aria-pressed="${!!it.pain}">!</button></div></div>
-      <div class="body">${it.open?videoBox(e,'tr'):''}${box}${it.open?trNotes(e,it,idx):''}
+      <div class="body">${it.open?videoBox(e,'tr'):''}${box}${it.open?setsSec(it,e,idx)+trNotes(e,it,idx):''}
         ${!it.rt?'':`<div class="rtline"><span>${esc(testShort(it.rt.test))} · ${rtText(it.rt)}</span>${it.rt.nach?`<button class="chip sm" data-rtdel="${idx}">ändern</button>`:`<button class="chip sm" data-rtnach="${idx}">danach messen</button>`}</div>`}
-        <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}${timerOn(it)?`<button class="tmr" data-timerstop="${idx}" aria-label="Timer stoppen">⏱ ${fmtSec(timerLeft())}</button>`:`<button data-timer="${idx}">Timer</button>`}</div>
+        <div class="exacts">${it.rt?'':`<button data-rt="${idx}">Test davor</button>`}</div>
       </div></div>`}).join('');
   const done=s.items.filter(i=>i.r).length, total=s.items.filter(i=>!i.skip).length, todo=s.items.filter(exTodo).length;
   main.innerHTML=`<section class="card" id="sesshead"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><b>${esc(s.label)}</b>${s.date!==iso(today)?` <span class="badge">Nachtrag ${dfmt(s.date)}</span>`:''}${s.snapshot!=null?' <span class="badge">fortgesetzt</span>':''}<div class="hint" style="display:flex;align-items:center;gap:8px">${done} von ${total} gemacht · ${durStr(sessMin(s))}${qBtn('haken')}</div></div><button class="btn ghost" id="addEx">+ Übung</button></div>${qHint('haken','Haken = gemacht. „!“ = Problem bei der Ausführung oder Schmerz, schreib kurz dazu, was war. Wirkung misst du mit „Test davor“, die Reaktion später am Tag und am Folgetag zeigt der Kalender.','margin-top:8px')}
@@ -1126,7 +1162,15 @@ function rTraining(){
     // Tipp in die Kopfzeile außerhalb der Knöpfe (oder auf den Namen) klappt auf oder zu; nur eine Übung offen
     if((!b||b.classList.contains('nm'))&&ev.target.closest('.head')){const o=!it.open;s.items.forEach(x=>x.open=false);it.open=o;render();return}
     if(!b) return; if(b.dataset.nedit!=null){noteEditSheet(b.dataset.nedit);return} const e=exById(it.id);
-    if(b.dataset.dose!=null){doseSheet(e,render,{session:it});return}
+    // Satz: offen → gemacht wie geplant (Halteübung: Zeit startet im Kästchen); gemacht → „− +“ auf/zu; laufende Zeit → früher beenden
+    if(b.dataset.set){const si=+b.dataset.set.split(':')[1],d=planD(it,e),x=(it.sets||[])[si];
+      if(timerOn(it,si)){timerEarly();return}
+      if(!x){SETEDIT=null;if(d.u==='s'){startTimer(it,e,si);render();return}setPut(it,e,si,{n:d.n,...(d.kg!=null?{kg:d.kg}:{})});if(!it.t)it.t=Date.now();render();return}
+      SETEDIT=SETEDIT&&SETEDIT.it===it&&SETEDIT.si===si?null:{it,si};render();return}
+    if(b.dataset.setplus!=null){const d=planD(it,e),sl=setSlots(it,e);setPut(it,e,sl.length,{n:d.n,...(d.kg!=null?{kg:d.kg}:{})});SETEDIT={it,si:sl.length};render();toast('Satz angehängt');return}
+    if(b.dataset.setd){const x=SETEDIT&&SETEDIT.it===it?(it.sets||[])[SETEDIT.si]:null;if(!x)return;const v=b.dataset.setd;
+      if(v==='undo'||v==='del'){if(v==='del'){it.sets.splice(SETEDIT.si,1);while(it.sets.length&&it.sets[it.sets.length-1]==null)it.sets.pop();if(!it.sets.length)delete it.sets}else setPut(it,e,SETEDIT.si,null);SETEDIT=null;render();return}
+      const [k,dv]=v.split(':');if(k==='n')x.n=Math.max(1,x.n+ +dv);else x.kg=Math.max(0,Math.round((x.kg+ +dv)*10)/10);render();return}
     if(b.dataset.r){it.r=it.r?null:1;it.skip=false;it.t=it.r?Date.now():null;if(it.r&&it.open)openNext(s.items,idx);render();return}
     // „!“: Ausnahme setzen, gilt zugleich als gemacht; Übung bleibt bzw. wird offen, Notizfeld offen mit Fokus. Erneuter Tipp hebt nur die Ausnahme auf.
     if(b.hasAttribute('data-pain')){if(it.pain){it.pain=false;render();return}
@@ -1137,8 +1181,6 @@ function rTraining(){
     if(b.dataset.rtdel!=null){delete it.rt;render();return}
     if(b.dataset.nadd!=null){if(b.dataset.nadd.startsWith('cue:')){cueAddOpen(b.dataset.nadd,it.id);return}it.noteOpen=true;render();noteFocus('tr:'+idx);return}
     if(b.dataset.nok!=null){if(b.dataset.nok.startsWith('cue:')){cueAddDone();return}noteDoneTr(idx);return}
-    if(b.dataset.timer!=null){startTimer(it,e);render();return}
-    if(b.dataset.timerstop!=null){stopTimer();render();toast('Timer gestoppt');return}
     if(b.dataset.ec){const [i,ci]=b.dataset.ec.split(':').map(Number);cueEditSheet(e.cues[ci],v=>{const arr=[...e.cues];if(v==null)arr.splice(ci,1);else arr[ci]=v;setCues(e,arr);render()});return}
     if(b.dataset.pc){const [t,ci]=b.dataset.pc.split(':');cueEditSheet(PRINZIP[t][+ci],v=>{if(v==null)PRINZIP[t].splice(+ci,1);else PRINZIP[t][+ci]=v;S.prinzip=S.prinzip||{};S.prinzip[t]=PRINZIP[t];save();render()},'Prinzip '+t);return}
   });
@@ -1183,27 +1225,43 @@ const exTodo=i=>!i.r&&!i.skip;
 function openFirst(items){items.forEach(i=>i.open=false);const f=items.find(exTodo);if(f)f.open=true}
 function openNext(items,idx){items.forEach(i=>i.open=false);const f=items.slice(idx+1).find(exTodo)||items.slice(0,idx).find(exTodo);if(f)f.open=true}
 // ---------- Timer (Countdown in der offenen Übung) ----------
-// Zustand außerhalb des DOM, ein Intervall; render() zeichnet das Badge aus TIMER neu. Gestoppt bei Reiterwechsel, Fertig, Verwerfen, anderer Einheit.
-let TIMER=null; // {it, end, iv, ac}
+// Satzleiste (Entscheidung 03.10.2026): je geplantem Satz ein Kästchen. it.sets[i] = {n, kg} gemacht oder null (offen);
+// Plätze ab der geplanten Satzzahl sind Zusatzsätze („+“). Der Haken ✓ bleibt der Abschluss der Übung (keine Automatik).
+const planD=(it,e)=>(it&&it.d)||e.d;
+const setsDone=it=>(it&&Array.isArray(it.sets)?it.sets:[]).filter(Boolean);
+function setSlots(it,e){const k=Math.max(1,planD(it,e).sets||1),a=Array.isArray(it.sets)?it.sets:[],n=Math.max(k,a.length);return Array.from({length:n},(_,i)=>({s:a[i]||null,i,extra:i>=k}))}
+const kgStr=k=>Number(k).toLocaleString('de-DE');
+// „10 · 12 · 10 Wdh“ (mit kg je Satz, wenn vorhanden)
+const setsStr=(it,e)=>{const d=planD(it,e);return setsDone(it).map(x=>x.n+(x.kg!=null?' ('+kgStr(x.kg)+' kg)':'')).join(' · ')+' '+d.u};
+function setPut(it,e,i,val){it.sets=Array.isArray(it.sets)?it.sets:[];while(it.sets.length<i)it.sets.push(null);it.sets[i]=val;
+  while(it.sets.length&&it.sets[it.sets.length-1]==null)it.sets.pop();if(!it.sets.length)delete it.sets}
+// Timer im Satz (nur Einheit „s“): Zustand außerhalb des DOM, ein Intervall; gestoppt bei Reiterwechsel, Fertig, Verwerfen, anderer Einheit.
+let TIMER=null; // {it, si, dur, end, iv, ac}
+let SETEDIT=null; // {it, si}: Satz mit offenem „− +“
 const fmtSec=sec=>Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
 const timerLeft=()=>TIMER?Math.max(0,Math.ceil((TIMER.end-Date.now())/1000)):0;
-const timerOn=it=>!!TIMER&&TIMER.it===it;
-// Sekunden aus der Dosis, wenn die Einheit „s“ ist, sonst 60 s
-const timerSecs=(it,e)=>{const d=(it&&it.d)||e.d;return d&&d.u==='s'&&d.n>0?d.n:60};
-function startTimer(it,e){
-  stopTimer(); let ac=null;
+const timerOn=(it,si)=>!!TIMER&&TIMER.it===it&&(si==null||TIMER.si===si);
+function startTimer(it,e,si){
+  stopTimer(); let ac=null; const dur=Math.max(1,planD(it,e).n||60);
   // AudioContext beim Tipp anlegen (Nutzergeste), damit der Ton am Ende abgespielt werden darf
   try{const AC=window.AudioContext||window.webkitAudioContext;if(AC){ac=new AC();if(ac.resume)ac.resume().catch(()=>{})}}catch(x){ac=null}
-  TIMER={it,end:Date.now()+timerSecs(it,e)*1000,ac,iv:setInterval(tickTimer,250)};
+  TIMER={it,si,dur,end:Date.now()+dur*1000,ac,iv:setInterval(tickTimer,250)};
 }
-function tickTimer(){if(!TIMER)return;const left=timerLeft();const el=document.querySelector('#exlist [data-timerstop]');if(el)el.textContent='⏱ '+fmtSec(left);if(left<=0)timerDone()}
+function tickTimer(){if(!TIMER)return;const left=timerLeft();const el=document.querySelector('#exlist .set.run .v');if(el)el.textContent=fmtSec(left);if(left<=0)timerDone()}
+// Zeit um: Ton, Vibration, Satz mit der geplanten Zeit eingetragen
 function timerDone(){
-  const ac=TIMER.ac; clearInterval(TIMER.iv); TIMER=null;
+  const {ac,it,si,dur}=TIMER; clearInterval(TIMER.iv); TIMER=null;
   try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(x){}
-  beep(ac); toast('Zeit um');
-  // Badge zurück zum Knopf, ohne neu zu zeichnen (ein Eingabefeld behält den Fokus)
-  const el=document.querySelector('#exlist [data-timerstop]');if(el){const b=document.createElement('button');b.dataset.timer=el.dataset.timerstop;b.textContent='Timer';el.replaceWith(b)}
+  beep(ac); const e=exById(it.id); if(e)setPut(it,e,si,{n:dur,...(planD(it,e).kg!=null?{kg:planD(it,e).kg}:{})}); toast(`Satz ${si+1}: ${dur} s`); render();
 }
+// früher beendet: tatsächliche Zeit eintragen
+function timerEarly(){const {it,si,dur}=TIMER;const n=Math.max(1,dur-timerLeft());stopTimer();const e=exById(it.id);if(e)setPut(it,e,si,{n,...(planD(it,e).kg!=null?{kg:planD(it,e).kg}:{})});toast(`Satz ${si+1}: ${n} s`);render()}
+// Bildschirm an, solange die Einheit offen ist (Wake Lock, wenn der Browser es erlaubt)
+let WAKE=null;
+async function wakeSync(){const want=S.tab==='training'&&!!S.session&&!!S.sessShow&&document.visibilityState==='visible';
+  try{if(want&&!WAKE&&navigator.wakeLock){WAKE=await navigator.wakeLock.request('screen');WAKE.addEventListener('release',()=>{WAKE=null})}
+    else if(!want&&WAKE){const w=WAKE;WAKE=null;await w.release()}}catch(x){WAKE=null}}
+document.addEventListener('visibilitychange',()=>wakeSync());
 function beep(ac){try{if(!ac)return;const t0=ac.currentTime;[0,0.3].forEach(dt=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=880;g.gain.setValueAtTime(0.0001,t0+dt);g.gain.exponentialRampToValueAtTime(0.3,t0+dt+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+dt+0.22);o.connect(g);g.connect(ac.destination);o.start(t0+dt);o.stop(t0+dt+0.25)});setTimeout(()=>{try{ac.close()}catch(x){}},1500)}catch(x){}}
 function stopTimer(){if(!TIMER)return;clearInterval(TIMER.iv);try{if(TIMER.ac)TIMER.ac.close()}catch(x){}TIMER=null}
 // Video-Link der Übung in neuem Tab bzw. in der zuständigen App öffnen
@@ -1318,6 +1376,7 @@ function saveSession(open,note){
   const s=S.session; if(!s)return; if(note!=null)s.note=note;
   if(open){syncSession();save();return}
   stopTimer();
+  s.items.forEach(i=>{if(exTodo(i)&&setsDone(i).length){i.r=1;if(!i.t)i.t=Date.now()}}); // eingetragene Sätze: gemacht, auch ohne Haken
   const n=s.items.filter(exTodo).length; s.items.forEach(i=>{if(exTodo(i))i.skip=true});
   const d=ensureDay(s.date);
   const prev=s.snapshot!=null?JSON.parse(s.snapshot):null;
@@ -2036,7 +2095,7 @@ function daySheet(k){
     ${pv?`<div class="r"><span class="l">Plan</span><span class="hint">ab heute v${pv.v}: ${esc(pv.change)}</span></div>`:''}
   </div>`;
   const sessions=x.done.filter(a=>a.ex).map(a=>`<section class="card" style="padding:10px"><div class="row between"><b><span class="act ${a.type}">${TYPES[a.type].l}</span> ${esc(labelOf(a.block))}${a.dur?' · '+durStr(a.active,a.dur):''}${(f=>f?` <span style="white-space:nowrap">· ${f.done} von ${f.n}</span>`:'')(sessFill(a,k))}${a.segments>1?` <span class="hint">in ${a.segments} Abschnitten</span>`:''}${isRunning(a.block,k)?' <span class="badge test">läuft</span>':a.open?' <span class="badge test">offen</span>':(f=>f&&!f.full?' <span class="badge">unvollständig</span>':'')(sessFill(a,k))}</b><button class="btn ghost" style="padding:6px 10px;font-size:13px" data-cont2="${a.block}">${a.open||isRunning(a.block,k)?'Weitermachen':'Bearbeiten'}</button></div>
-    <div class="list">${a.ex.map(i=>{const e=exById(i.id);const dv=i.d&&!sameDose(i.d,e.d);return `<div class="item ${i.skip?'skipped':''}" style="padding:7px 0"><div class="t"><b style="font-weight:600${i.skip?';text-decoration:line-through;color:var(--ink3)':''}">${esc(e.name)}${i.extra?' <span class="badge">außerplanmäßig</span>':''}</b><small${i.skip?' style="color:var(--ink3)"':''}>${doseStr(i.d||e.d)+(sideLbl(i.side)||(e.side==='getrennt'?' · L/R':''))}${i.note?' · '+esc(i.note):''}</small>${i.rt?`<small style="display:block">Retest ${esc(testShort(i.rt.test))}: ${rtText(i.rt)}</small>`:''}</div><span style="text-align:right">${i.skip?'':(i.r?'<span style="color:var(--accent);font-weight:700">✓</span>':'·')+(i.pain?' <span class="badge" style="background:var(--g4);color:#fff">!</span>':'')}${i.t?`<br><small class="hint">${hhmm(i.t)}</small>`:''}</span></div>`}).join('')}</div>
+    <div class="list">${a.ex.map(i=>{const e=exById(i.id);const dv=i.d&&!sameDose(i.d,e.d);return `<div class="item ${i.skip?'skipped':''}" style="padding:7px 0"><div class="t"><b style="font-weight:600${i.skip?';text-decoration:line-through;color:var(--ink3)':''}">${esc(e.name)}${i.extra?' <span class="badge">außerplanmäßig</span>':''}</b><small${i.skip?' style="color:var(--ink3)"':''}>${(setsDone(i).length?esc(setsStr(i,e))+' <span class="hint">(Plan '+doseStr(planD(i,e))+')</span>':doseStr(i.d||e.d))+(sideLbl(i.side)||(e.side==='getrennt'?' · L/R':''))}${i.note?' · '+esc(i.note):''}</small>${i.rt?`<small style="display:block">Retest ${esc(testShort(i.rt.test))}: ${rtText(i.rt)}</small>`:''}</div><span style="text-align:right">${i.skip?'':(i.r?'<span style="color:var(--accent);font-weight:700">✓</span>':'·')+(i.pain?' <span class="badge" style="background:var(--g4);color:#fff">!</span>':'')}${i.t?`<br><small class="hint">${hhmm(i.t)}</small>`:''}</span></div>`}).join('')}</div>
     ${a.note?`<div class="cue" style="margin-top:6px">${esc(a.note)}</div>`:''}</section>`).join('');
   const journal=[...x.notes,...x.tests.map(t=>({k:'Test',t:`${t.n}: L ${t.l} · R ${t.r}`}))];
   openSheet(`<div class="daynav"><button class="chip sm" id="dPrev" aria-label="Vortag">‹<span class="dl"> Vortag</span></button><h3>${wd(d)}, ${fmt(d)}</h3><button class="chip sm" id="dNext" aria-label="Folgetag"${nextFut?' disabled':''}><span class="dl">Folgetag </span>›</button><button class="xbtn" id="dClose" aria-label="Schließen">✕</button></div>
