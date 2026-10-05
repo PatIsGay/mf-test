@@ -246,15 +246,17 @@
     table.matrix.month{width:100%}
     .land-hint{display:inline}
   }
-  /* Kalender im Querformat auf dem Handy (html.kalq nur im Reiter Kalender): Reiterleiste als schmale Leiste links, Kopf und Banner
-     ausgeblendet, Matrix füllt Breite und Höhe; Zeilenhöhe --kalrh und Schrift --kalfs setzt kalFit() auf table.kalm */
+  /* Querformat auf dem Handy: Reiterleiste in allen Reitern als schmale Leiste links (wie im Kalender, Wunsch 05.10.2026), Inhalt rechts daneben.
+     Kalender (html.kalq): zusätzlich Kopf und Banner ausgeblendet, Matrix füllt Breite und Höhe; Zeilenhöhe --kalrh und Schrift --kalfs setzt kalFit() auf table.kalm */
   @media (orientation:landscape) and (max-height:560px){
+    body{padding-left:calc(64px + env(safe-area-inset-left,0px))}
+    main{padding-bottom:24px}
+    nav.tabs{top:0;right:auto;width:calc(64px + env(safe-area-inset-left,0px));justify-content:flex-start}
+    nav.tabs .bar{max-width:none;width:100%;height:100%;grid-template-columns:1fr;grid-auto-rows:min-content;align-content:center;gap:6px;border-top:0;border-right:1px solid var(--line);padding:6px 6px 6px calc(6px + env(safe-area-inset-left,0px))}
+    nav.tabs button{font-size:10px;padding:6px 0}
     html.kalq .proto,html.kalq .top{display:none}
     html.kalq .app{max-width:none;border:0}
-    html.kalq nav.tabs{top:0;right:auto;width:calc(64px + env(safe-area-inset-left,0px));justify-content:flex-start}
-    html.kalq nav.tabs .bar{max-width:none;width:100%;height:100%;grid-template-columns:1fr;grid-auto-rows:min-content;align-content:center;gap:6px;border-top:0;border-right:1px solid var(--line);padding:6px 6px 6px calc(6px + env(safe-area-inset-left,0px))}
-    html.kalq nav.tabs button{font-size:10px;padding:6px 0}
-    html.kalq main{padding:8px 12px 24px calc(76px + env(safe-area-inset-left,0px));gap:10px}
+    html.kalq main{padding:8px 12px 24px;gap:10px}
     html.kalq table.kalm{width:100%}
     html.kalq table.kalm th,html.kalq table.kalm td{height:var(--kalrh,auto);padding-top:1px;padding-bottom:1px}
     html.kalq table.kalm:not(.month){font-size:var(--kalfs,12px)}
@@ -509,6 +511,8 @@
   main.withbar{padding-bottom:calc(110px + 64px)}
   @media (min-width:520px){#sessbar{border-left:1px solid var(--line);border-right:1px solid var(--line)}}
   @media (min-width:640px){#sessbar{max-width:900px;padding:8px 16px}}
+  /* Querformat: Leiste links, die Fußleiste der Einheit sitzt unten rechts daneben */
+  @media (orientation:landscape) and (max-height:560px){#sessbar{bottom:0;left:calc(64px + env(safe-area-inset-left,0px))}main.withbar{padding-bottom:calc(24px + 64px)}}
   /* echte App: Update-Zeile unter der Kopfzeile, Backup-Hinweis auf Heute, Timer-Badge, Sheet „Mehr“ */
   .updrow{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 16px;background:var(--accent-soft);color:var(--ink);font-size:13px;font-weight:600;text-align:left;border-bottom:1px solid var(--line)}
   .updrow[hidden]{display:none}
@@ -548,7 +552,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.19';
+const APP_VERSION='1.0.20';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -1107,6 +1111,9 @@ function rTraining(){
     document.querySelectorAll('[data-aedit]').forEach(b=>b.onclick=()=>aktEditSheet(tk,+b.dataset.aedit));
     return;
   }
+  // Timer läuft nur, solange seine Übung offen ist: Haken, Zuklappen oder eine andere Übung öffnen beendet ihn wie ein Tipp aufs laufende Kästchen
+  // (tatsächliche Zeit wird eingetragen); überspringen verwirft ihn (Wunsch 05.10.2026)
+  if(TIMER&&!(TIMER.it.open&&s.items.includes(TIMER.it))){if(TIMER.it.skip||!s.items.includes(TIMER.it))stopTimer();else timerEarly(false)}
   const curEntry=(i=>i>=0?S.days[s.date].done[i]:null)(S.days[s.date]?findEntry(s.date,s.block):-1);
   // Notizen zur Übung unter den Cues (nur offene Übung, „+“ fügt hinzu): höchstens NOTE_MAX sichtbar, weitere im eigenen Scrollbereich (notesFit); Tipp ändert oder löscht
   // Notiz dieser Einheit: während das Feld offen ist, steht sie nur im Feld, danach oben in der Liste
@@ -1254,8 +1261,8 @@ function timerDone(){
   try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(x){}
   beep(ac); const e=exById(it.id); if(e)setPut(it,e,si,{n:dur,...(planD(it,e).kg!=null?{kg:planD(it,e).kg}:{})}); toast(`Satz ${si+1}: ${dur} s`); render();
 }
-// früher beendet: tatsächliche Zeit eintragen
-function timerEarly(){const {it,si,dur}=TIMER;const n=Math.max(1,dur-timerLeft());stopTimer();const e=exById(it.id);if(e)setPut(it,e,si,{n,...(planD(it,e).kg!=null?{kg:planD(it,e).kg}:{})});toast(`Satz ${si+1}: ${n} s`);render()}
+// früher beendet: tatsächliche Zeit eintragen (re===false: ohne Neuzeichnen, Aufruf aus rTraining bzw. „Fertig“)
+function timerEarly(re){const {it,si,dur}=TIMER;const n=Math.max(1,dur-timerLeft());stopTimer();const e=exById(it.id);if(e)setPut(it,e,si,{n,...(planD(it,e).kg!=null?{kg:planD(it,e).kg}:{})});toast(`Satz ${si+1}: ${n} s`);if(re!==false)render()}
 // Bildschirm an, solange die Einheit offen ist (Wake Lock, wenn der Browser es erlaubt)
 let WAKE=null;
 async function wakeSync(){const want=S.tab==='training'&&!!S.session&&!!S.sessShow&&document.visibilityState==='visible';
@@ -1375,7 +1382,7 @@ function discardSession(){
 function saveSession(open,note){
   const s=S.session; if(!s)return; if(note!=null)s.note=note;
   if(open){syncSession();save();return}
-  stopTimer();
+  if(TIMER&&s.items.includes(TIMER.it)&&!TIMER.it.skip)timerEarly(false);else stopTimer(); // laufender Satz zählt mit der tatsächlichen Zeit
   s.items.forEach(i=>{if(exTodo(i)&&setsDone(i).length){i.r=1;if(!i.t)i.t=Date.now()}}); // eingetragene Sätze: gemacht, auch ohne Haken
   const n=s.items.filter(exTodo).length; s.items.forEach(i=>{if(exTodo(i))i.skip=true});
   const d=ensureDay(s.date);
