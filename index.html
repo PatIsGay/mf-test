@@ -552,7 +552,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.21';
+const APP_VERSION='1.0.22';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -842,13 +842,27 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 // ---------- Sheet ----------
 const sheetbg=document.getElementById('sheetbg'), sheet=document.getElementById('sheet');
-// Zurück-Taste (Android): beim Öffnen höchstens ein Verlaufseintrag {sheet:1}; closeSheet ruft kein history.back() (sonst Schleife),
-// der Eintrag bleibt liegen und wird beim nächsten Öffnen wiederverwendet. popstate ohne offenes Sheet: nichts tun.
-let sheetHist=false;
+// Zurück-Taste (Android, Browser): solange ein Sheet offen ist, gibt es genau einen eigenen Verlaufseintrag {sheet:1}; Untersheets und Sheets,
+// die ein anderes öffnen, nutzen ihn mit (keine Kette). Zurück entfernt ihn selbst (popstate schließt bzw. führt ins Bibliothek-Sheet zurück).
+// 1.0.22 (Fund 2, Entscheidung des Nutzers 07.10.2026): Schließt das Sheet auf anderem Weg (Knopf, Speichern, Wischen, Hintergrund), entfernt die App
+// den Eintrag selbst mit history.back(), damit danach ein Zurück die App verlässt. Das geschieht erst nach dem laufenden Ablauf (setTimeout 0):
+// öffnet derselbe Tipp gleich das nächste Sheet, bleibt der Eintrag. Die Marke SH_ZURUECK sorgt dafür, dass das folgende popstate nichts schließt;
+// wurde inzwischen ein Sheet geöffnet, legt es den Eintrag neu an. Nach einem Neuladen mit offenem Sheet räumt der Start den alten Eintrag ab.
+let SH_ZURUECK=0; // Zeitpunkt des eigenen history.back(), 0 = keins unterwegs
+const shEintrag=()=>{try{return !!(history.state&&history.state.sheet)}catch(e){return false}};
+const shPush=()=>{if(!shEintrag()){try{history.pushState({sheet:1},'')}catch(e){}}};
+function shAufraeumen(){
+  if(SH_ZURUECK||sheetbg.classList.contains('open')||!shEintrag())return;
+  const t=SH_ZURUECK=Date.now();
+  try{history.back()}catch(e){SH_ZURUECK=0;return}
+  // Rückfall, falls kein popstate kommt: Marke nach 1 s lösen; ein inzwischen offenes Sheet bekommt seinen Eintrag
+  setTimeout(()=>{if(SH_ZURUECK===t){SH_ZURUECK=0;if(sheetbg.classList.contains('open'))shPush()}},1000)}
 function openSheet(html,full){delete sheet.dataset.bibk;sheet.innerHTML='<div class="grab" aria-hidden="true"></div>'+html;sheet.classList.toggle('full',!!full);sheet.classList.remove('drag','snap');sheet.style.transform='';sheetbg.classList.add('open');sheet.scrollTop=0;
-  if(!(history.state&&history.state.sheet)){try{history.pushState({sheet:1},'')}catch(e){}}sheetHist=true}
-function closeSheet(){delete sheet.dataset.bibk;delete sheet.dataset.back;sheetbg.classList.remove('open');sheet.classList.remove('full','drag','snap');sheet.style.transform='';sheetHist=false}
-window.addEventListener('popstate',()=>{if(sheetbg.classList.contains('open'))backOrClose()});
+  if(!SH_ZURUECK)shPush()}
+function closeSheet(){delete sheet.dataset.bibk;delete sheet.dataset.back;sheetbg.classList.remove('open');sheet.classList.remove('full','drag','snap');sheet.style.transform='';setTimeout(shAufraeumen,0)}
+window.addEventListener('popstate',()=>{
+  if(SH_ZURUECK){SH_ZURUECK=0;if(sheetbg.classList.contains('open'))shPush();return} // eigenes history.back(): nichts schließen
+  if(sheetbg.classList.contains('open'))backOrClose()});
 // Wischen nach unten schließt (wie Tipp auf den Hintergrund): Start nur bei scrollTop 0, nicht auf Eingabefeldern oder Knöpfen, der Griff zieht immer
 let shDrag=null;
 sheet.addEventListener('pointerdown',ev=>{if(ev.button>0)return;const g=ev.target.closest('.grab');if(!g&&(sheet.scrollTop>0||ev.target.closest('input,textarea,button,select,.matrix-wrap')))return;
@@ -2461,8 +2475,11 @@ function backupDue(){const a=exportAge();return (a==null||a>7)&&entryDays()>=7}
 // erst {ok:true} im Rückruf (Datei geschrieben) setzt „Letzter Export“, zeichnet neu und zeigt „Exportiert: …“; „abgebrochen“ ändert nichts;
 // „schreibfehler“, sofortiges {ok:false}, Ausnahme oder unlesbare Antwort: „Export fehlgeschlagen“, kein Download (geht im WebView nicht).
 // Nur wenn saveFile fehlt (ältere Hülle), lädt die App wie im Browser herunter.
+// 1.0.22 (Fund 7): Solange ein Export-Token offen ist (Dialog der Hülle offen oder Antwort unterwegs), tut ein weiterer Tipp nichts, ohne Toast.
+let EXPORT_TOKEN=null;
 function exportData(fertig){
   const name=(TEST?'mf-log-test-':'mf-log-')+iso(today)+'.json';
+  if(nativeHas('saveFile')&&EXPORT_TOKEN&&NATIVE_OFFEN.has(EXPORT_TOKEN))return;
   if(!nativeHas('saveFile')){
   S.lastExport=new Date().toISOString();
   const data={app:'MF-Log',version:APP_VERSION,kanal:KANAL,exportiert:S.lastExport,daten:S};
@@ -2474,7 +2491,7 @@ function exportData(fertig){
   // Datei wie im Browser: daten mit dem neuen Zeitstempel, S selbst bleibt bis zum Rückruf unverändert
   const ts=new Date().toISOString(); let text;
   try{text=JSON.stringify({app:'MF-Log',version:APP_VERSION,kanal:KANAL,exportiert:ts,daten:Object.assign({},S,{lastExport:ts})},null,1)}catch(e){toast('Export fehlgeschlagen');return}
-  nativeMitRueckruf('saveFile',[name,text],'export',r=>{
+  EXPORT_TOKEN=nativeMitRueckruf('saveFile',[name,text],'export',r=>{
     if(r.ok){S.lastExport=ts;save();render();if(fertig&&fertig!==render)fertig();toast('Exportiert: '+name);return}
     if(r.error!=='abgebrochen')toast('Export fehlgeschlagen')});
 }
@@ -2624,6 +2641,7 @@ function initPwa(){
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;const n=new Date();n.setHours(12,0,0,0);if(iso(n)!==iso(today)){save();location.reload()}});
 
 load(); applyTheme(); render(); initPwa(); initNative();
+shAufraeumen(); // 1.0.22: nach einem Neuladen mit offenem Sheet den liegengebliebenen Eintrag {sheet:1} entfernen
 if(loadFehler)setTimeout(()=>toast('Gespeicherte Daten nicht lesbar. Kopie unter '+STORE_KEY+'-defekt.'),300);
 </script>
 </body>
