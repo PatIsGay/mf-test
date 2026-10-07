@@ -552,7 +552,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.22';
+const APP_VERSION='1.0.23';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -1147,7 +1147,7 @@ function rTraining(){
         else{st=sessState(ent,tk);ok=!!f&&f.full;btn='Bearbeiten';cl='ghost'}}
       const open=S.trOpen===bid;
       const items=bl?[...bl.items.map(([id,,sd])=>({id,sd,it:ent&&ent.ex?ent.ex.find(x=>x.id===id):null})),...(ent&&ent.ex?ent.ex.filter(x=>x.extra&&!bl.items.some(y=>y[0]===x.id)):[]).map(it=>({id:it.id,it}))]:(ent&&ent.ex?ent.ex:[]).map(it=>({id:it.id,it}));
-      const list=!open?'':items.map(({id,sd,it})=>{const e=exById(id);const sk=it&&it.skip;const mark=it&&it.r&&!sk?'<span style="color:var(--accent);font-weight:700">✓</span>':'';
+      const list=!open?'':items.filter(o=>exById(o.id)).map(({id,sd,it})=>{const e=exById(id);const sk=it&&it.skip;const mark=it&&it.r&&!sk?'<span style="color:var(--accent);font-weight:700">✓</span>':'';
         return `<div class="item" style="padding:6px 0"><div class="t"><b style="font-weight:600${sk?';text-decoration:line-through;color:var(--ink3)':''}">${esc(e.name)}${bl&&it&&it.extra?' <span class="badge">außerplanmäßig</span>':''}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small${sk?' style="color:var(--ink3)"':''}>${it&&setsDone(it).length?esc(setsStr(it,e)):doseStr((it&&it.d)||e.d)}${sideLbl((it&&it.side)||sd)||(e.side==='getrennt'?' · L/R':'')}</small></div>${mark}</div>`}).join('');
       return `<div class="trrow" data-trrow="${esc(bid)}"><button class="trhead" data-trtog="${esc(bid)}" aria-expanded="${open}"><span class="act ${type}">${type}</span><span class="t"><b>${esc(labelOf(bid))}</b><span class="trst${ok?' ok':''}">${st}</span></span><span class="trarr" aria-hidden="true">${open?'▾':'▸'}</span></button>${open?`<div class="trbody"><div class="list">${list||'<div class="hint">Noch keine Übung.</div>'}</div><button class="btn ${cl} wide" data-go="${esc(bid)}">${btn}</button></div>`:''}</div>`};
     // Sportzeile (Tennis, Laufen): erfasste Einträge als Chips (Tipp → ändern/löschen), „Erfassen“ bleibt, mehrere Einträge erlaubt
@@ -1532,18 +1532,55 @@ function newExerciseSheet(cb){
   const nn=document.getElementById('nn'); if(nn)try{nn.focus({preventScroll:true})}catch(e){}
 }
 // Wo kommt die Übung vor? Einheiten (auch die laufende), Blöcke, frühere Plan-Versionen
+// 1.0.23: nbl = Anzahl Blöcke, einhN = Einheiten ohne Doppelzählung der laufenden (für die Rückfrage im Testkanal)
 function exUsage(id){
-  let einh=0; Object.values(S.days).forEach(d=>(d.done||[]).forEach(a=>{if((a.ex||[]).some(i=>i.id===id))einh++}));
-  if(S.session&&S.session.items.some(i=>i.id===id))einh++;
-  const bl=P().blocks.some(b=>b.items.some(x=>x[0]===id)), ver=P().versions.some(v=>(v.blocks||[]).some(b=>b.items.some(x=>x[0]===id)));
-  return {einh,bl,ver,any:einh>0||bl||ver};
+  let einh=0, einhN=0; Object.entries(S.days).forEach(([k,d])=>(d.done||[]).forEach(a=>{if((a.ex||[]).some(i=>i.id===id)){einh++;einhN++}}));
+  const s=S.session;
+  if(s&&s.items.some(i=>i.id===id)){einh++;const d=S.days[s.date],a=d&&d.done[findEntry(s.date,s.block)];if(!(a&&(a.ex||[]).some(i=>i.id===id)))einhN++}
+  const nbl=P().blocks.filter(b=>b.items.some(x=>x[0]===id)).length, bl=nbl>0, ver=P().versions.some(v=>(v.blocks||[]).some(b=>b.items.some(x=>x[0]===id)));
+  return {einh,einhN,nbl,bl,ver,any:einh>0||bl||ver};
+}
+// 1.0.23 (Wunsch des Nutzers 07.10.2026, nur im Testkanal erreichbar): eine benutzte Übung überall entfernen. Blöcke (neue Plan-Version),
+// Einträge in allen Einheiten aller Tage samt Abweichungen (abw) und Namen außerplanmäßiger Übungen, Cue-Einträge im Journal, laufende Einheit,
+// ihr Schnappschuss und Timer. Einheiten, die dadurch leer werden, fallen weg. Ältere Plan-Versionen bleiben unverändert (Verlauf: „gelöschte Übung“).
+// Gibt die Zahl der Blöcke zurück, aus denen die Übung entfernt wurde.
+function exPurge(id,names){
+  const nm=new Set(names.filter(Boolean)), cat=(exById(id)||{}).cat;
+  const ohne=arr=>arr.filter(i=>!(i&&i.id===id));
+  // Eintrag einer Einheit bereinigen; null = leer geworden (fällt weg)
+  const eintrag=a=>{a.ex=ohne(a.ex);if(!a.ex.length)return null;
+    a.skipped=a.ex.filter(i=>i&&i.skip).length;
+    if(Array.isArray(a.extra)){a.extra=a.extra.filter(n=>!nm.has(n));if(!a.extra.length)a.extra=null}
+    if(cat==='I'&&a.type==='I'&&!a.ex.some(i=>i&&!i.skip&&(exById(i.id)||{}).cat==='I'))a.type='K';
+    return a};
+  const abw=t=>typeof t==='string'&&[...nm].some(n=>t==='+ '+n||t==='+ '+n+' (Testphase)'||t==='− '+n+' übersprungen');
+  let nbl=0; P().blocks.forEach(b=>{const n=b.items.length;b.items=b.items.filter(x=>x[0]!==id);if(b.items.length!==n)nbl++});
+  Object.values(S.days).forEach(d=>{if(!d||typeof d!=='object')return;
+    if(Array.isArray(d.done))d.done=d.done.filter(a=>!(a&&Array.isArray(a.ex)&&a.ex.some(i=>i&&i.id===id))||!!eintrag(a));
+    if(Array.isArray(d.abw))d.abw=d.abw.filter(t=>!abw(t));
+    if(Array.isArray(d.notes))d.notes=d.notes.filter(n=>!(n&&n.k==='Cue'&&nm.has(n.b)))});
+  const s=S.session;
+  if(s&&Array.isArray(s.items)&&s.items.some(i=>i&&i.id===id)){
+    if(TIMER&&TIMER.it&&TIMER.it.id===id)stopTimer();
+    if(SETEDIT&&SETEDIT.it&&SETEDIT.it.id===id)SETEDIT=null;
+    const warOffen=s.items.some(i=>i&&i.id===id&&i.open);
+    s.items=ohne(s.items);
+    if(s.snapshot!=null){try{const a=JSON.parse(s.snapshot);if(a&&Array.isArray(a.ex)){const r=eintrag(a);s.snapshot=r?JSON.stringify(r):null}}catch(x){}}
+    if(!s.items.length){stopTimer();S.session=null;S.sessShow=false}
+    else if(warOffen)openFirst(s.items)}
+  if(S.openEx===id)S.openEx=null; delete BILMODE[id];
+  if(BIB_NOTE&&BIB_NOTE.id===id)BIB_NOTE=null; if(CUE_NEW&&CUE_NEW.id===id)CUE_NEW=null; if(VIDPLAY&&VIDPLAY.split(':')[1]===id)VIDPLAY=null;
+  return nbl;
 }
 function removeExercise(id){
-  const e=exById(id); if(!e)return; const i=EX.indexOf(e); if(i>=0)EX.splice(i,1);
+  const e=exById(id); if(!e)return; const seed=exSeed().find(x=>x.id===id);
+  const nbl=exPurge(id,[e.name,seed&&seed.name]);
+  const i=EX.indexOf(e); if(i>=0)EX.splice(i,1);
   if((S.customEx||[]).some(c=>c.id===id))S.customEx=S.customEx.filter(c=>c.id!==id); else {S.exDeleted=S.exDeleted||[];if(!S.exDeleted.includes(id))S.exDeleted.push(id)}
   ['exEdit','cues','dose','exStatus','exTests','exNotes'].forEach(k=>{if(S[k]&&typeof S[k]==='object')delete S[k][id]});
-  if(S.openEx===id)S.openEx=null;
+  if(nbl)newVersion('− '+e.name+' (gelöscht)');
   addEvent(e.name+': gelöscht');
+  return nbl;
 }
 // Übung bearbeiten: Name, Kategorie, Region, Seite, Prinzip-Tags, Video-Link, Dosierung (vorhandenes Dosis-Sheet). Speichern ohne Rückfrage.
 function exEditSheet(e){
@@ -1560,7 +1597,7 @@ function exEditSheet(e){
     <div class="lbl">Video-Link</div><input type="url" id="evid" inputmode="url" placeholder="https://…" value="${esc(video)}">
     <div class="row between"><span class="lbl">Dosierung</span><button class="chip sm" id="edose">${doseStr(e.d)} ✎</button></div>
     <button class="btn primary wide" id="esave">Speichern</button>
-    <div style="margin-top:22px">${us.any?`<div class="hint" id="edelHint">Löschen geht nur, solange die Übung in keiner Einheit und keinem Block vorkommt${us.einh?` (${us.einh} Einheit${us.einh===1?'':'en'})`:us.bl?' (steht im Plan)':' (stand in einer früheren Plan-Version)'}. Setze sie auf verworfen.</div>`:'<button class="btn danger wide" id="edel">Übung löschen</button>'}</div>`);
+    <div style="margin-top:22px">${us.any&&!TEST?`<div class="hint" id="edelHint">Löschen geht nur, solange die Übung in keiner Einheit und keinem Block vorkommt${us.einh?` (${us.einh} Einheit${us.einh===1?'':'en'})`:us.bl?' (steht im Plan)':' (stand in einer früheren Plan-Version)'}. Setze sie auf verworfen.</div>`:'<button class="btn danger wide" id="edel">Übung löschen</button>'}</div>`);
     document.querySelectorAll('#sheet [data-ecat]').forEach(b=>b.onclick=()=>{keep();cat=b.dataset.ecat;draw()});
     document.querySelectorAll('#sheet [data-eside]').forEach(b=>b.onclick=()=>{keep();side=b.dataset.eside;draw()});
     document.querySelectorAll('#sheet [data-etag]').forEach(b=>b.onclick=()=>{const t=b.dataset.etag;tags=tags.includes(t)?tags.filter(x=>x!==t):[...tags,t];b.classList.toggle('on',tags.includes(t));b.setAttribute('aria-pressed',tags.includes(t))});
@@ -1575,7 +1612,11 @@ function exEditSheet(e){
       if(!(S.customEx||[]).some(c=>c.id===e.id)){S.exEdit=S.exEdit||{};S.exEdit[e.id]=f}
       addEvent(alt+': '+ch.join(', ')); save(); closeSheet(); toast('Übung gespeichert'); render()};
     const del=document.getElementById('edel');
-    if(del)del.onclick=()=>confirmSheet('Übung „'+esc(e.name)+'“ löschen?',()=>{removeExercise(e.id);save();toast('Übung gelöscht');render()},'Löschen','<div class="hint">Sie kommt in keiner Einheit und keinem Block vor. Cues, Notizen und Absicht der Übung werden mit gelöscht.</div>');
+    // Testkanal (1.0.23): Löschen immer möglich; die eine Rückfrage nennt, wo die Übung vorkommt. Echter Kanal: nur unbenutzt (sonst Hinweis oben).
+    const wo=[us.nbl?us.nbl+(us.nbl===1?' Block':' Blöcken'):'',us.einhN?us.einhN+(us.einhN===1?' Einheit':' Einheiten'):''].filter(Boolean);
+    const delText=wo.length?`<div class="warn" id="edelWo">Kommt vor in ${wo.join(' und ')} und wird dort mit entfernt${us.nbl?' (neue Plan-Version)':''}. Einheiten ohne weitere Übung fallen weg. Cues, Notizen und Absicht werden mit gelöscht.</div>`
+      :`<div class="hint">Sie kommt in keiner Einheit und keinem Block vor. Cues, Notizen und Absicht der Übung werden mit gelöscht.${us.ver?' In älteren Plan-Versionen steht sie danach als „gelöschte Übung“.':''}</div>`;
+    if(del)del.onclick=()=>confirmSheet('Übung „'+esc(e.name)+'“ löschen?',()=>{const nbl=removeExercise(e.id);save();toast(nbl?'Übung gelöscht, neue Version v'+P().versions[P().versions.length-1].v:'Übung gelöscht');render()},'Löschen',delText);
   };
   draw();
 }
@@ -1878,7 +1919,7 @@ function openBibSheet(kind,keep){
       const v=r.v; const end=v.to||iso(today); const n=daysBetween(v.from,end); const ds=[...Array(Math.max(n,1)).keys()].map(i=>addD(new Date(v.from+'T12:00:00'),i)); const s=stats(ds); const open=S.openV===v.v;
       return `<div class="item vrow ${open?'open':''}" data-v="${v.v}"><div class="t"><b>v${v.v} · ${v.to?dfmt(v.from)+' – '+dfmt(v.to):'seit '+dfmt(v.from)} · ${n} Tag${n===1?'':'e'}</b><small>${esc(v.change)}</small>
         <div class="row" style="gap:6px;margin-top:6px"><span class="act K">K ×${s.cnt('K')}</span><span class="act I">I ×${s.cnt('I')}</span><span class="act Tennis">T ×${s.cnt('Tennis')}</span><span class="kpi"><span class="hint">Form</span><span class="sy ${cls(Math.round(s.tf))}">${fmtN(s.tf)}</span></span><span class="kpi"><span class="hint">Sympt.</span><span class="sy ${clsSy(Math.round(s.sc))}">${fmtN(s.sc)}</span></span><span class="kpi"><span class="hint">vollst.</span><span>${s.full}/${s.sess}</span></span></div>
-        ${open?`<div class="vdet">${(v.blocks||[]).map(vb=>`<div class="vblock"><h2>${esc(vb.name)} <span class="act ${vb.type}">${TYPES[vb.type].l}</span></h2><div class="list">${vb.items.map(([id,pr,sd])=>{const e=exById(id);return `<div class="item"><span class="act ${e.cat}">${e.cat}</span><div class="t"><b>${esc(e.name)}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small>${doseStr(e.d)}${sideLbl(sd)||(e.side==='getrennt'?' · L/R':'')}</small></div></div>`}).join('')||'<div class="hint">leer</div>'}</div></div>`).join('')||'<div class="hint">Keine Blöcke.</div>'}</div>`:''}
+        ${open?`<div class="vdet">${(v.blocks||[]).map(vb=>`<div class="vblock"><h2>${esc(vb.name)} <span class="act ${vb.type}">${TYPES[vb.type].l}</span></h2><div class="list">${vb.items.map(([id,pr,sd])=>{const e=exById(id);if(!e)return `<div class="item exweg"><span class="act" style="color:var(--ink3);box-shadow:inset 0 0 0 1px var(--line)">–</span><div class="t"><b style="color:var(--ink3);font-weight:600">gelöschte Übung</b><small>${sideLbl(sd).replace(/^ · /,'')}</small></div></div>`;return `<div class="item"><span class="act ${e.cat}">${e.cat}</span><div class="t"><b>${esc(e.name)}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small>${doseStr(e.d)}${sideLbl(sd)||(e.side==='getrennt'?' · L/R':'')}</small></div></div>`}).join('')||'<div class="hint">leer</div>'}</div></div>`).join('')||'<div class="hint">Keine Blöcke.</div>'}</div>`:''}
         </div><span>${open?'▾':'▸'}</span></div>`}).join('')}</div></section>`;
   } else {
     const groups=['Table','Bewegung','Eigene'];
@@ -2002,7 +2043,7 @@ function rKal(){
   const days=[...Array(M?28:7).keys()].map(i=>addD(start,i));
   const TRAIN=['K','I','Tennis','Laufen','Pause'];
   // part: je Typ die unvollständigen Einheiten („5 von 7“), xtra: Namen außerplanmäßiger Übungen; beides nur Ausgeführt (k = Datum)
-  const grp=(arr,plan,k)=>{const out=[];(arr||[]).forEach(v=>{const t=typeOf(typeof v==='string'?v:v.type);if(!TRAIN.includes(t))return;const fl=!plan&&typeof v!=='string'?sessFill(v,k):null;let f=out.find(o=>o.t===t);if(f)f.n++;else out.push(f={t,n:1,part:[],xtra:[]});if(fl&&!fl.full)f.part.push(fl.done+' von '+fl.n);if(!plan&&typeof v!=='string')(v.ex||[]).filter(i=>i.extra).forEach(i=>{const nm=exById(i.id).name;if(!f.xtra.includes(nm))f.xtra.push(nm)})});return out};
+  const grp=(arr,plan,k)=>{const out=[];(arr||[]).forEach(v=>{const t=typeOf(typeof v==='string'?v:v.type);if(!TRAIN.includes(t))return;const fl=!plan&&typeof v!=='string'?sessFill(v,k):null;let f=out.find(o=>o.t===t);if(f)f.n++;else out.push(f={t,n:1,part:[],xtra:[]});if(fl&&!fl.full)f.part.push(fl.done+' von '+fl.n);if(!plan&&typeof v!=='string')(v.ex||[]).filter(i=>i&&i.extra&&exById(i.id)).forEach(i=>{const nm=exById(i.id).name;if(!f.xtra.includes(nm))f.xtra.push(nm)})});return out};
   const sw=(arr,plan,k)=>{const a=grp(arr,plan,k);return `<span class="cell">${a.length?a.map(o=>{const tt=[o.n>1?o.n+'×':'',o.part.length?'unvollständig, '+o.part.join(' · '):'',o.xtra.length?'außerplanmäßig: '+o.xtra.join(', '):''].filter(Boolean).join(', ');return `<span class="sw ${o.t}${o.part.length?' part':''}${o.xtra.length?' xtra':''}"${tt?` title="${tt}"`:''}>${o.n>1&&!M?o.n:''}</span>`}).join(''):'<span class="hint">·</span>'}</span>`};
   const syCell=v=>v==null||v===0?'<span class="hint">·</span>':`<span class="sy ${clsSy(Math.round(v))}">${fmtN(v)}</span>`;
   const syms=symsIn(days);
@@ -2163,7 +2204,7 @@ function daySheet(k){
     ${pv?`<div class="r"><span class="l">Plan</span><span class="hint">ab heute v${pv.v}: ${esc(pv.change)}</span></div>`:''}
   </div>`;
   const sessions=x.done.filter(a=>a.ex).map(a=>`<section class="card" style="padding:10px"><div class="row between"><b><span class="act ${a.type}">${TYPES[a.type].l}</span> ${esc(labelOf(a.block))}${a.dur?' · '+durStr(a.active,a.dur):''}${(f=>f?` <span style="white-space:nowrap">· ${f.done} von ${f.n}</span>`:'')(sessFill(a,k))}${a.segments>1?` <span class="hint">in ${a.segments} Abschnitten</span>`:''}${isRunning(a.block,k)?' <span class="badge test">läuft</span>':a.open?' <span class="badge test">offen</span>':(f=>f&&!f.full?' <span class="badge">unvollständig</span>':'')(sessFill(a,k))}</b><button class="btn ghost" style="padding:6px 10px;font-size:13px" data-cont2="${a.block}">${a.open||isRunning(a.block,k)?'Weitermachen':'Bearbeiten'}</button></div>
-    <div class="list">${a.ex.map(i=>{const e=exById(i.id);const dv=i.d&&!sameDose(i.d,e.d);return `<div class="item ${i.skip?'skipped':''}" style="padding:7px 0"><div class="t"><b style="font-weight:600${i.skip?';text-decoration:line-through;color:var(--ink3)':''}">${esc(e.name)}${i.extra?' <span class="badge">außerplanmäßig</span>':''}</b><small${i.skip?' style="color:var(--ink3)"':''}>${(setsDone(i).length?esc(setsStr(i,e))+' <span class="hint">(Plan '+doseStr(planD(i,e))+')</span>':doseStr(i.d||e.d))+(sideLbl(i.side)||(e.side==='getrennt'?' · L/R':''))}${i.note?' · '+esc(i.note):''}</small>${i.rt?`<small style="display:block">Retest ${esc(testShort(i.rt.test))}: ${rtText(i.rt)}</small>`:''}</div><span style="text-align:right">${i.skip?'':(i.r?'<span style="color:var(--accent);font-weight:700">✓</span>':'·')+(i.pain?' <span class="badge" style="background:var(--g4);color:#fff">!</span>':'')}${i.t?`<br><small class="hint">${hhmm(i.t)}</small>`:''}</span></div>`}).join('')}</div>
+    <div class="list">${a.ex.filter(i=>i&&exById(i.id)).map(i=>{const e=exById(i.id);const dv=i.d&&!sameDose(i.d,e.d);return `<div class="item ${i.skip?'skipped':''}" style="padding:7px 0"><div class="t"><b style="font-weight:600${i.skip?';text-decoration:line-through;color:var(--ink3)':''}">${esc(e.name)}${i.extra?' <span class="badge">außerplanmäßig</span>':''}</b><small${i.skip?' style="color:var(--ink3)"':''}>${(setsDone(i).length?esc(setsStr(i,e))+' <span class="hint">(Plan '+doseStr(planD(i,e))+')</span>':doseStr(i.d||e.d))+(sideLbl(i.side)||(e.side==='getrennt'?' · L/R':''))}${i.note?' · '+esc(i.note):''}</small>${i.rt?`<small style="display:block">Retest ${esc(testShort(i.rt.test))}: ${rtText(i.rt)}</small>`:''}</div><span style="text-align:right">${i.skip?'':(i.r?'<span style="color:var(--accent);font-weight:700">✓</span>':'·')+(i.pain?' <span class="badge" style="background:var(--g4);color:#fff">!</span>':'')}${i.t?`<br><small class="hint">${hhmm(i.t)}</small>`:''}</span></div>`}).join('')}</div>
     ${a.note?`<div class="cue" style="margin-top:6px">${esc(a.note)}</div>`:''}</section>`).join('');
   const journal=[...x.notes,...x.tests.map(t=>({k:'Test',t:`${t.n}: L ${t.l} · R ${t.r}`}))];
   openSheet(`<div class="daynav"><button class="chip sm" id="dPrev" aria-label="Vortag">‹<span class="dl"> Vortag</span></button><h3>${wd(d)}, ${fmt(d)}</h3><button class="chip sm" id="dNext" aria-label="Folgetag"${nextFut?' disabled':''}><span class="dl">Folgetag </span>›</button><button class="xbtn" id="dClose" aria-label="Schließen">✕</button></div>
