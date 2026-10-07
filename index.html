@@ -552,12 +552,56 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.20';
+const APP_VERSION='1.0.21';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
 {const bn=document.getElementById('kanalBanner');if(bn){bn.textContent='Test · Beispieldaten';bn.hidden=!TEST}
  const tc=document.querySelector('meta[name="theme-color"]');if(tc&&TEST)tc.content='#C8641E'}
+
+// ---------- Android-Hülle (Brücke window.MFNative, Vertrag in docs/HUELLE.md 3.1) ----------
+// Ohne Brücke (Browser, installierte PWA) bleibt alles wie bisher. Jede Methode antwortet sofort mit einem JSON-String {ok, error?, data?}.
+// Fehlende Methode (ältere Hülle), Ausnahme, unlesbare Antwort oder keine sofortige Antwort binnen 5 s ergeben {ok:false}.
+// Methoden mit spätem Ergebnis (saveFile ab H1, health ab H3) bekommen einen Token; das Ergebnis kommt über window.MFNativeCb(token, json).
+const NATIVE=typeof window.MFNative!=='undefined'?window.MFNative:null;
+const NATIVE_MS=5000;
+const nativeHas=m=>{try{return !!NATIVE&&typeof NATIVE[m]==='function'}catch(x){return false}};
+function nativeAntwort(r){
+  if(typeof r==='string'){try{r=JSON.parse(r)}catch(x){return {ok:false,error:'Antwort nicht lesbar'}}}
+  return r&&typeof r==='object'&&typeof r.ok==='boolean'?r:{ok:false,error:'Antwort ungültig'}}
+// Liefert immer ein Promise mit {ok, error?, data?}; wirft nie. Aufruf als Methode von NATIVE (die Java-Brücke braucht das Objekt als this).
+function nativeCall(m,...args){
+  const nein=e=>{try{console.warn('MFNative.'+m+': '+e)}catch(x){}return {ok:false,error:e}};
+  if(!nativeHas(m))return Promise.resolve(nein('Methode fehlt'));
+  let r; try{r=NATIVE[m](...args)}catch(x){return Promise.resolve(nein(String(x&&x.message||x)))}
+  const fertig=v=>{const a=nativeAntwort(v);return a.ok?a:nein(a.error||'ok:false')};
+  if(r&&typeof r.then==='function')return new Promise(res=>{const t=setTimeout(()=>res(nein('keine Antwort nach '+NATIVE_MS/1000+' s')),NATIVE_MS);
+    const weg=x=>{clearTimeout(t);res(nein(String(x&&x.message||x)))};
+    try{r.then(v=>{clearTimeout(t);res(fertig(v))},weg)}catch(x){weg(x)}});
+  return Promise.resolve(fertig(r));
+}
+// Offene Tokens (gemeinsam für alle Methoden mit Rückruf): Token → Funktion, die genau einmal die Antwort {ok, error?, data?} bekommt.
+// Kein Zeitlimit auf den Rückruf (ein Dialog der Hülle darf lange offen sein). Token nur [A-Za-z0-9_-], höchstens 40 Zeichen.
+const NATIVE_OFFEN=new Map(); let NATIVE_NR=0;
+const nativeToken=art=>(art+'-'+Date.now().toString(36)+'-'+(++NATIVE_NR)).replace(/[^A-Za-z0-9_-]/g,'').slice(-40);
+// Ruft m(...args, token). Sofortiges {ok:false} (oder Ausnahme, fehlende Methode, unlesbar) geht gleich an fertig; sonst wartet der Token auf MFNativeCb.
+function nativeMitRueckruf(m,args,art,fertig){
+  const token=nativeToken(art); NATIVE_OFFEN.set(token,fertig);
+  nativeCall(m,...args,token).then(r=>{if(!r.ok&&NATIVE_OFFEN.get(token)===fertig){NATIVE_OFFEN.delete(token);fertig(r)}});
+  return token;
+}
+// Rückruf der Hülle (nur mit Brücke angelegt): json als Objekt oder String; unbekannte oder schon beantwortete Tokens still mit Warnung ignorieren
+if(NATIVE)window.MFNativeCb=function(token,json){
+  const f=typeof token==='string'?NATIVE_OFFEN.get(token):undefined;
+  if(!f){try{console.warn('MFNativeCb: unbekannter oder schon beantworteter Token '+String(token))}catch(x){}return}
+  NATIVE_OFFEN.delete(token);
+  let a; try{a=nativeAntwort(json)}catch(x){a={ok:false,error:'Antwort nicht lesbar'}}
+  try{f(a)}catch(x){try{console.warn('MFNativeCb: '+(x&&x.message||x))}catch(y){}}
+};
+// Angaben der Hülle aus info() für „Mehr“ ({version, flavor, android}); null = keine Brücke oder keine gültige Antwort
+let HUELLE=null;
+function initNative(){if(!NATIVE)return;nativeCall('info').then(r=>{HUELLE=r.ok&&r.data&&typeof r.data==='object'?r.data:null})}
+const huelleVersion=()=>HUELLE&&HUELLE.version!=null&&String(HUELLE.version).trim()?'Version '+String(HUELLE.version).trim():'Version unbekannt';
 
 // ---------- Stammdaten (beide Kanäle) und Beispieldaten (nur Testkanal) ----------
 // Symptome legt der Nutzer im echten Kanal selbst an (der Code ist öffentlich); der Testkanal hat neutrale Beispiele
@@ -969,7 +1013,7 @@ function rHeute(){
   const tm=document.getElementById('tagMore'); if(tm)tm.onclick=()=>{tagMore=true;render()};
   document.getElementById('openRett').onclick=()=>rettSheet();
   const tp=document.getElementById('toPlan'); if(tp)tp.onclick=()=>{setTab('bib');openBibSheet('plan')};
-  const bk=document.getElementById('bkRow'); if(bk)bk.onclick=()=>{exportData();render()};
+  const bk=document.getElementById('bkRow'); if(bk)bk.onclick=()=>exportData(render);
 }
 
 // ---------- Einzelnen Tag planen (heute oder künftig) ----------
@@ -1263,9 +1307,12 @@ function timerDone(){
 }
 // früher beendet: tatsächliche Zeit eintragen (re===false: ohne Neuzeichnen, Aufruf aus rTraining bzw. „Fertig“)
 function timerEarly(re){const {it,si,dur}=TIMER;const n=Math.max(1,dur-timerLeft());stopTimer();const e=exById(it.id);if(e)setPut(it,e,si,{n,...(planD(it,e).kg!=null?{kg:planD(it,e).kg}:{})});toast(`Satz ${si+1}: ${n} s`);if(re!==false)render()}
-// Bildschirm an, solange die Einheit offen ist (Wake Lock, wenn der Browser es erlaubt)
-let WAKE=null;
+// Bildschirm an, solange die Einheit offen ist (Wake Lock, wenn der Browser es erlaubt).
+// In der Android-Hülle zusätzlich MFNative.keepAwake(true/false), nur bei Änderung. NATIVE_WAKE = zuletzt gemeldet; null = noch nie,
+// deshalb meldet der erste Aufruf nach dem Laden den Stand auch dann, wenn er false ist (das Fenster der Hülle übersteht ein Neuladen der Seite).
+let WAKE=null, NATIVE_WAKE=null;
 async function wakeSync(){const want=S.tab==='training'&&!!S.session&&!!S.sessShow&&document.visibilityState==='visible';
+  if(NATIVE_WAKE!==want&&nativeHas('keepAwake')){NATIVE_WAKE=want;nativeCall('keepAwake',want)}
   try{if(want&&!WAKE&&navigator.wakeLock){WAKE=await navigator.wakeLock.request('screen');WAKE.addEventListener('release',()=>{WAKE=null})}
     else if(!want&&WAKE){const w=WAKE;WAKE=null;await w.release()}}catch(x){WAKE=null}}
 document.addEventListener('visibilitychange',()=>wakeSync());
@@ -2409,14 +2456,27 @@ function exportAge(){if(!S.lastExport)return null;const t=new Date(S.lastExport)
 const entryDays=()=>Object.values(S.days||{}).filter(d=>d.tf!=null||(d.done||[]).length||(d.notes||[]).length||(d.tests||[]).length).length;
 // Backup-Hinweis auf Heute: nie oder vor mehr als 7 Tagen exportiert und mindestens 7 Tage mit Einträgen
 function backupDue(){const a=exportAge();return (a==null||a>7)&&entryDays()>=7}
-function exportData(){
+// Export als JSON-Datei. Im Browser Download (unverändert); fertig() läuft danach (Neuzeichnen).
+// In der Android-Hülle über MFNative.saveFile(name, text, token), gleicher Dateiname und Inhalt (Entscheidung des Nutzers 07.10.2026, docs/HUELLE.md 3.1):
+// erst {ok:true} im Rückruf (Datei geschrieben) setzt „Letzter Export“, zeichnet neu und zeigt „Exportiert: …“; „abgebrochen“ ändert nichts;
+// „schreibfehler“, sofortiges {ok:false}, Ausnahme oder unlesbare Antwort: „Export fehlgeschlagen“, kein Download (geht im WebView nicht).
+// Nur wenn saveFile fehlt (ältere Hülle), lädt die App wie im Browser herunter.
+function exportData(fertig){
+  const name=(TEST?'mf-log-test-':'mf-log-')+iso(today)+'.json';
+  if(!nativeHas('saveFile')){
   S.lastExport=new Date().toISOString();
   const data={app:'MF-Log',version:APP_VERSION,kanal:KANAL,exportiert:S.lastExport,daten:S};
-  const name=(TEST?'mf-log-test-':'mf-log-')+iso(today)+'.json';
   try{const blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'});const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
     save();toast('Exportiert: '+name)}
   catch(e){toast('Export fehlgeschlagen')}
+  if(fertig)fertig();return}
+  // Datei wie im Browser: daten mit dem neuen Zeitstempel, S selbst bleibt bis zum Rückruf unverändert
+  const ts=new Date().toISOString(); let text;
+  try{text=JSON.stringify({app:'MF-Log',version:APP_VERSION,kanal:KANAL,exportiert:ts,daten:Object.assign({},S,{lastExport:ts})},null,1)}catch(e){toast('Export fehlgeschlagen');return}
+  nativeMitRueckruf('saveFile',[name,text],'export',r=>{
+    if(r.ok){S.lastExport=ts;save();render();if(fertig&&fertig!==render)fertig();toast('Exportiert: '+name);return}
+    if(r.error!=='abgebrochen')toast('Export fehlgeschlagen')});
 }
 // ---------- Übungsdatei (art:'uebungen', format 1) ----------
 // Aufbau: {app:'MF-Log', art:'uebungen', format:1, erstellt:'JJJJ-MM-TT', uebungen:[{name, kategorie:'K'|'I', seite:'beidseitig'|'getrennt',
@@ -2523,13 +2583,14 @@ function applyTheme(){const t=S&&S.theme;if(t==='light'||t==='dark')document.doc
 function mehrSheet(){
   const age=exportAge(); const th=S.theme||'system';
   openSheet(`<h3>Mehr</h3>
-    <div class="setrow"><div class="kv"><b>Kanal</b><span>${esc(APP_NAME)}${TEST?' (Beispieldaten)':''}</span><b>Version</b><span>${APP_VERSION}</span><b>Letzter Export</b><span id="lastExp">${S.lastExport?esc(dateDE(S.lastExport))+(age?` (vor ${age} Tag${age===1?'':'en'})`:' (heute)'):'noch nie'}</span></div></div>
+    <div class="setrow"><div class="kv"><b>Kanal</b><span>${esc(APP_NAME)}${TEST?' (Beispieldaten)':''}</span><b>Version</b><span>${APP_VERSION}</span>${NATIVE?`<b>Hülle</b><span id="huelleVer">${esc(huelleVersion())}</span>`:''}<b>Letzter Export</b><span id="lastExp">${S.lastExport?esc(dateDE(S.lastExport))+(age?` (vor ${age} Tag${age===1?'':'en'})`:' (heute)'):'noch nie'}</span></div></div>
     <div class="setrow"><div class="lbl">Daten sichern</div><div class="row"><button class="btn primary" id="expBtn">Exportieren</button><button class="btn ghost" id="impBtn">Importieren</button></div>
       <input type="file" id="impFile" accept=".json,application/json" hidden>
       <div class="hint">Export als JSON-Datei, z. B. zum Ablegen in Google Drive. Import einer Sicherung ersetzt den ganzen Stand dieses Kanals; eine Übungsdatei fügt nur Übungen hinzu.</div></div>
     <div class="setrow"><div class="lbl">Erscheinungsbild</div><div class="seg" id="themeSeg">${[['system','System'],['light','Hell'],['dark','Dunkel']].map(([k,l])=>`<button data-theme-set="${k}" class="${th===k?'on':''}">${l}</button>`).join('')}</div></div>
     <div class="setrow" style="margin-top:18px">${TEST?'<button class="btn danger wide" id="resetBtn">Beispieldaten zurücksetzen</button>':'<button class="btn danger wide" id="wipeBtn">Alle Daten löschen</button>'}</div>`);
-  document.getElementById('expBtn').onclick=()=>{exportData();mehrSheet()};
+  // nach dem Export „Mehr“ neu zeichnen (Letzter Export: heute); mit Hülle erst nach dem Rückruf {ok:true} und nur, wenn das Sheet noch offen ist
+  document.getElementById('expBtn').onclick=()=>exportData(()=>{if(document.getElementById('expBtn'))mehrSheet()});
   const fi=document.getElementById('impFile');
   document.getElementById('impBtn').onclick=()=>fi.click();
   fi.onchange=()=>{const f=fi.files&&fi.files[0];if(f)importFile(f)};
@@ -2562,7 +2623,7 @@ function initPwa(){
 // Die installierte App bleibt oft über Nacht geöffnet; „heute“ ist beim Laden festgelegt, deshalb bei neuem Tag neu laden
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;const n=new Date();n.setHours(12,0,0,0);if(iso(n)!==iso(today)){save();location.reload()}});
 
-load(); applyTheme(); render(); initPwa();
+load(); applyTheme(); render(); initPwa(); initNative();
 if(loadFehler)setTimeout(()=>toast('Gespeicherte Daten nicht lesbar. Kopie unter '+STORE_KEY+'-defekt.'),300);
 </script>
 </body>
