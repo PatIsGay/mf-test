@@ -149,6 +149,7 @@
   button.goalline{padding:4px 0 2px}
   .item.goal{width:100%;text-align:left;font-size:14px;padding:9px 0}
   .item.goal .t b{display:inline;font-weight:600}
+  .item.goal .t small{display:block;margin-top:1px}
   .item.goal .go,.goalpick .go{color:var(--ink3);font-size:13px;font-weight:600}
   .goalpick{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px}
   /* Dosis im Training: Chip-Knopf, Tipp öffnet „Heute abweichend“ */
@@ -558,7 +559,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.26';
+const APP_VERSION='1.0.27';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -1892,16 +1893,16 @@ function rBib(){
     return `<div class="nrow exsec"><div class="exsec-h nhead"><span class="ftl">Notizen${all.length>NOTE_MAX?' · '+all.length:''}</span>${op?'':notePlus('bib:'+e.id)}</div>`
       +(op?noteInput('bib:'+e.id,dn?dn.t:'','Beobachtung, Verdacht, Entscheidung'):'')+(all.length?noteListHtml(all,'bib:'+e.id):'')+`</div>`};
   // „Soll verbessern“: Tests der Übung mit Ziel und letztem Wert, oben auf der Karte; „ändern“ öffnet die Auswahl wie im Plan
-  const zielSec=e=>{const ts=exTests(e.id);
+  const zielSec=e=>{const ts=exTests(e.id),pi=primIdx(ts);
     return `<div class="exsec ziel"><div class="exsec-h"><span>Soll verbessern</span><button class="tog" data-exziel="${e.id}">${ts.length?'ändern':'wählen'}</button></div>`
-      +(ts.length?ts.map((t,i)=>{const pr=i===0&&ts.length>1?' <span class="badge">primär</span>':'';
+      +(ts.length?nachGrp(ts).map(({t,i})=>{const pr=pi.has(i)&&ts.length>1?' <span class="badge">primär</span>':'';
         if(!SEITE_FOLGT.includes(t.side)){const z=zielOf(t);return `<div class="zrow"><b>${esc(goalName(t))}</b>${pr}<div class="zw">${z?nw('Ziel '+goalVal(z.test,z.target))+' · ':''}${nw(goalLast(t))}</div></div>`}
         // Seite folgt der Ausführung bzw. beide: je ermittelter Seite eine Zeile mit Ziel und zuletzt
         const ps=planSides(e.id),ss=intentSides(t,ps);
         return `<div class="zrow"><b>${esc(goalName(t))}</b>${pr}${t.side!=='b'?` <span class="zps">(${planSideLbl(ps)})</span>`:''}`
           +ss.map(x=>{const k={test:t.test,side:x},z=zielOf(k);return `<div class="zw">${x==='l'?'links':'rechts'}: ${z?nw('Ziel '+goalVal(z.test,z.target))+' · ':''}${nw(goalLast(k))}</div>`}).join('')+`</div>`}).join(''):'<div class="zleer">Noch nichts gewählt.</div>')+`</div>`};
   // zugeklappt: Ziel-Kästchen unter dem Namen (aufgeklappt zeigt der Abschnitt die Einzelheiten, nichts doppelt)
-  const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${ts.map(t=>`<span class="zchip">${esc(goalName(t))}</span>`).join('')}</span>`:''};
+  const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${nachGrp(ts).map(({t})=>`<span class="zchip">${esc(goalName(t))}</span>`).join('')}</span>`:''};
   // leere Bibliothek (echter Kanal beim Start): nur Hinweis und „+ Neue Übung“, ohne Suche und Filter
   const leer=!EX.length;
   main.innerHTML=nav+inb+(leer?'':`<input type="text" id="q" placeholder="Suchen, auch Spitznamen"><div class="chips">${[['alle','Alle'],['K','Korrektiv'],['I','Intensiv'],['test','Testphase'],['geparkt','Geparkt']].map(([k,l])=>`<button class="chip sm ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}<select class="chip sm posf${fp!=null?' on':''}" id="posF" aria-label="Position">${posOpts(fp,'Position: alle')}<option value="0"${fp===0?' selected':''}>ohne Position</option></select></div>`)+`
@@ -2343,8 +2344,13 @@ function goalStr(z){return `${goalName(z)} · Ziel ${goalVal(z.test,z.target)} �
 // Abschnitte bleiben beim Umbruch zusammen („zuletzt 5 cm“ nicht zerrissen)
 const nw=t=>`<span style="white-space:nowrap">${esc(t)}</span>`;
 const goalHtml=z=>`<b>${esc(goalName(z))}</b> · ${nw('Ziel '+goalVal(z.test,z.target))} · ${nw(goalLast(z))}`;
-// Absicht der Übung (S.exTests[exId] = [{test, side}], der erste ist primär); Ziel nur, wenn Test und (ermittelte) Seite übereinstimmen
+// Absicht der Übung (S.exTests[exId] = [{test, side}]); Ziel nur, wenn Test und (ermittelte) Seite übereinstimmen.
+// Primär (1.0.27, Wunsch des Nutzers 08.10.2026): je Testgruppe (Table, Bewegung, Eigene) der oberste Test der Liste; vorher nur der erste der Liste.
 const exTests=exId=>(S.exTests||{})[exId]||[];
+const testGrp=n=>{const t=testOf(n);return t&&TEST_GRUPPEN.includes(t.g)?t.g:'Eigene'};
+const primIdx=ts=>{const g=new Set(),o=new Set();ts.forEach((t,i)=>{const x=testGrp(t.test);if(!g.has(x)){g.add(x);o.add(i)}});return o};
+// Anzeige nach Gruppe geordnet (Table, Bewegung, Eigene), innerhalb der Gruppe in Listenfolge; i = Position in der Liste
+const nachGrp=ts=>ts.map((t,i)=>({t,i,g:TEST_GRUPPEN.indexOf(testGrp(t.test))})).sort((a,b)=>a.g-b.g||a.i-b.i);
 const zielOf=t=>P().ziele.find(z=>z.test===t.test&&(z.side||'')===(t.side||''))||null;
 // Seite der Absicht (Entscheidung 02.10.2026): l/r fest, b beide Seiten, a Seite der Ausführung, g Gegenseite (a und g bei getrennten Übungen).
 // a und g ergeben sich aus der Ausführung: Plan-Position „nur links“/„nur rechts“/„beide Seiten“; ohne bekannte Ausführung beide Seiten.
@@ -2399,12 +2405,13 @@ function goalSheet(z,after){
   };
   draw();
 }
-// Absicht der Übung bearbeiten: Liste mit „primär“, „↑“, „−“ und „+ Test“; Übernehmen schreibt S.exTests, Abbruch über den Hintergrund verwirft
+// Absicht der Übung bearbeiten: Liste nach Gruppe, je Gruppe „primär“ (oberster), „↑“ macht einen Test in seiner Gruppe primär, „−“, „+ Test“; Übernehmen schreibt S.exTests, Abbruch über den Hintergrund verwirft
 function exTestsSheet(e,after){
   const orig=exTests(e.id).map(t=>({test:t.test,side:t.side||''}));
   let list=orig.map(t=>Object.assign({},t)), pick=false, test=null;
   const draw=()=>{
-    const rows=list.map((t,i)=>`<div class="item goal"><div class="t"><b>${esc(goalName(t))}</b>${i===0?' <span class="badge">primär</span>':''}</div>${i>0?`<button class="chip sm" data-xtup="${i}" aria-label="${esc(goalName(t))} primär machen">↑</button>`:''}<button class="chip sm" data-xtrm="${i}" aria-label="${esc(goalName(t))} entfernen">−</button></div>`).join('')||'<div class="hint">Noch kein Test gewählt.</div>';
+    const pi=primIdx(list);
+    const rows=nachGrp(list).map(({t,i})=>`<div class="item goal"><div class="t"><b>${esc(goalName(t))}</b>${pi.has(i)?' <span class="badge">primär</span>':''}<small>${esc(testGrp(t.test))}</small></div>${!pi.has(i)?`<button class="chip sm" data-xtup="${i}" aria-label="${esc(goalName(t))} primär machen">↑</button>`:''}<button class="chip sm" data-xtrm="${i}" aria-label="${esc(goalName(t))} entfernen">−</button></div>`).join('')||'<div class="hint">Noch kein Test gewählt.</div>';
     const TL=testList();
     const tl=`<div class="list">${TL.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-xt="${i}"><div class="t"><b>${esc(t.n)}</b><small>${esc(t.u)}</small></div><span class="badge">${t.g}</span></button>`).join('')}</div>`;
     openSheet(`<h3>Soll verbessern · ${esc(e.name)}</h3><div class="list">${rows}</div>
@@ -2583,10 +2590,11 @@ function rtPairs(exId){const out=[];Object.keys(S.days).sort().forEach(k=>(S.day
 function rtStart(it,after){
   const go=t=>measureSheet(t,{title:'Vorher · '+testShort(t.n),hint:'Danach die Übung machen, dann „danach“ messen.',initial:{l:lastTestVal(t.n,'l'),r:lastTestVal(t.n,'r')},
     cb:val=>{it.rt={test:t.n,vor:val,nach:null};closeSheet();after()}});
-  const pt=exTests(it.id)[0]; const tz=pt&&testOf(pt.test);
-  if(tz){go(tz);return}
-  const TL=testList();
-  openSheet(`<h3>Welcher Test?</h3><div class="list">${TL.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-t1="${i}"><div class="t"><b>${esc(t.n)}</b><small>${esc(t.u)}</small></div><span class="badge">${t.g}</span></button>`).join('')||'<div class="hint">Kein Test vorhanden.</div>'}</div>`);
+  // ein primärer Test: sofort messen; mehrere (z. B. Table und Bewegung): die primären oben zur Wahl, darunter alle anderen
+  const ts=exTests(it.id),pi=primIdx(ts),prim=[...new Set(nachGrp(ts).filter(({i})=>pi.has(i)).map(({t})=>t.test))].map(testOf).filter(Boolean);
+  if(prim.length===1){go(prim[0]);return}
+  const TL=[...prim,...testList().filter(t=>!prim.includes(t))];
+  openSheet(`<h3>Welcher Test?</h3>${prim.length?'<div class="lbl" id="rtPrim">Primär für diese Übung</div>':''}<div class="list">${TL.map((t,i)=>(prim.length&&i===prim.length?'</div><div class="lbl">Andere Tests</div><div class="list">':'')+`<button class="item" style="width:100%;text-align:left" data-t1="${i}"><div class="t"><b>${esc(t.n)}</b><small>${esc(t.u)}</small></div><span class="badge">${t.g}</span></button>`).join('')||'<div class="hint">Kein Test vorhanden.</div>'}</div>`);
   document.querySelectorAll('#sheet [data-t1]').forEach(b=>b.onclick=()=>go(TL[+b.dataset.t1]));
 }
 function rtAfter(it,after){const t=testOf(it.rt.test);if(!t)return;
