@@ -188,6 +188,9 @@
   .kv.big{font-size:14px}
   table.matrix tr.sep td{border-top:2px solid var(--line)}
   table.matrix.tests th:first-child,table.matrix.tests td:first-child{min-width:120px;max-width:140px;white-space:normal;line-height:1.25}
+  /* 1.0.24: Testname tippbar (öffnet den Test), gepunktet unterstrichen wie die Übungen unter „Retests“ */
+  table.matrix.tests .tname{font:inherit;color:inherit;text-align:left;text-decoration:underline dotted;text-underline-offset:3px;position:relative}
+  table.matrix.tests .tname::after{content:'';position:absolute;inset:-8px -4px}
   table.matrix th:first-child,table.matrix td:first-child{position:sticky;left:0;background:var(--surface);text-align:left;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;color:var(--ink2);padding-left:8px;z-index:1;min-width:86px;max-width:86px;overflow:hidden;text-overflow:ellipsis}
   table.matrix thead th{font-family:Manrope,sans-serif;font-size:11px;color:var(--ink2);background:var(--surface2)}
   table.matrix th.today{color:var(--accent);background:var(--accent-soft)}
@@ -552,7 +555,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.23';
+const APP_VERSION='1.0.24';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -667,13 +670,28 @@ const doseStr=d=>`${d.sets} × ${d.n} ${d.u}${d.kg!=null?' · '+d.kg.toLocaleStr
 const sameDose=(a,b)=>a.sets===b.sets&&a.n===b.n&&(a.kg??null)===(b.kg??null);
 // Ziele als Testwerte (S.plan.ziele): Beispiele nur im Testkanal
 const ZIELE_SEED=()=>TEST?[{id:'z1',test:'Gestrecktes Beinheben (SLR)',side:'l',target:80},{id:'z2',test:'Hüftbeugung',side:'r',target:90}]:[];
-// Test-Katalog (Stammdaten); single = einseitig gemessen (ein Wert)
+// Test-Katalog (Stammdaten); single = einseitig gemessen (ein Wert); a = standardmäßig im Assessment (die 9 Tests der Vorlage, 1.0.24)
 const TESTS = [
-  {g:'Table',n:'Hüftaußenrotation',u:'°'},{g:'Table',n:'Hüftinnenrotation',u:'°'},{g:'Table',n:'Hüftbeugung',u:'° / cm'},{g:'Table',n:'Gestrecktes Beinheben (SLR)',u:'°'},
-  {g:'Table',n:'Schulteraußenrotation',u:'°'},{g:'Table',n:'Schulterinnenrotation',u:'°'},{g:'Table',n:'Schulterflexion',u:'°'},
-  {g:'Bewegung',n:'Kniebeuge',u:'cm',single:true},{g:'Bewegung',n:'Vorbeuge',u:'cm',single:true},
+  {g:'Table',n:'Hüftaußenrotation',u:'°',a:true},{g:'Table',n:'Hüftinnenrotation',u:'°',a:true},{g:'Table',n:'Hüftbeugung',u:'° / cm',a:true},{g:'Table',n:'Gestrecktes Beinheben (SLR)',u:'°',a:true},
+  {g:'Table',n:'Schulteraußenrotation',u:'°',a:true},{g:'Table',n:'Schulterinnenrotation',u:'°',a:true},{g:'Table',n:'Schulterflexion',u:'°',a:true},
+  {g:'Bewegung',n:'Kniebeuge',u:'cm',single:true,a:true},{g:'Bewegung',n:'Vorbeuge',u:'cm',single:true,a:true},
   {g:'Eigene',n:'Wandstehen PSIS-Kontakt',u:'ja/nein',single:true},{g:'Eigene',n:'Goblet Hold 60°',u:'s',single:true},
 ];
+// 1.0.24 (Entscheidung des Nutzers 08.10.2026): Test-Katalog pflegbar, in beiden Kanälen. Aktueller Katalog = fest eingebaute Tests ohne die gelöschten
+// (S.testDeleted, Namen; bleiben auch nach Update und Import weg) plus eigene Tests (S.customTests: {n,u,g,single,a}), nach Gruppen geordnet.
+// „im Assessment“: S.testAssess[Name] (true/false) gilt vor dem Standard a. Der Name ist der Schlüssel in Messwerten (d.tests[].n),
+// Retests (it.rt.test), Zielen (z.test) und Absichten (S.exTests[].test); er ist eindeutig und lässt sich nicht ändern.
+const TEST_EINHEITEN=['°','cm','s','Wdh','ja/nein'];
+const TEST_GRUPPEN=['Table','Bewegung','Eigene'];
+const testKey=n=>String(n||'').trim().toLowerCase();
+function testList(){
+  const del=S&&Array.isArray(S.testDeleted)?S.testDeleted:[], eig=S&&Array.isArray(S.customTests)?S.customTests.filter(t=>t&&typeof t.n==='string'):[];
+  const gi=t=>{const i=TEST_GRUPPEN.indexOf(t.g);return i<0?TEST_GRUPPEN.length:i};
+  return [...TESTS.filter(t=>!del.includes(t.n)),...eig].sort((a,b)=>gi(a)-gi(b));
+}
+const testInAssess=t=>{const m=S&&S.testAssess;return !!t&&(m&&typeof m==='object'&&Object.prototype.hasOwnProperty.call(m,t.n)?!!m[t.n]:!!t.a)};
+// Beispiel-Messwerte (Testkanal) nur für eingebaute Tests, die nicht gelöscht sind
+const testVals=n=>S&&Array.isArray(S.testDeleted)&&S.testDeleted.includes(n)?[]:(TESTVALS[n]||[]);
 // Beispiel-Testwerte (feste Spalten 20.08. und 03.09.) nur im Testkanal
 const TESTVALS = TEST?{'Hüftaußenrotation':[['20.08.',35,40],['03.09.',40,40]],'Hüftinnenrotation':[['20.08.',25,20],['03.09.',30,25]],'Hüftbeugung':[['20.08.','4 cm','6 cm'],['03.09.','2 cm','5 cm']],'Gestrecktes Beinheben (SLR)':[['20.08.',60,70],['03.09.',70,70]],'Schulteraußenrotation':[['20.08.',75,80],['03.09.',80,80]],'Schulterinnenrotation':[['20.08.',50,45],['03.09.',55,50]],'Schulterflexion':[['20.08.',160,165],['03.09.',165,165]],'Kniebeuge':[['20.08.','8 cm','–'],['03.09.','6 cm','–']],'Vorbeuge':[['20.08.','12 cm','–'],['03.09.','9 cm','–']],'Wandstehen PSIS-Kontakt':[['03.09.','nein','–']],'Goblet Hold 60°':[['03.09.','70 s','–']]}:{};
 // Rettungskiste: Einträge in S.rettung ({id,t,a,x}, Merksatz zusätzlich d = Datum ISO); Beispieleinträge nur im Testkanal
@@ -795,6 +813,13 @@ function hydrate(obj){
   if(!S.exTests||typeof S.exTests!=='object')S.exTests={};
   if(S.exGoal&&typeof S.exGoal==='object')Object.entries(S.exGoal).forEach(([k,id])=>{const z=S.plan.ziele.find(x=>x.id===id);if(z&&!(S.exTests[k]||[]).length)S.exTests[k]=[{test:z.test,side:z.side||''}]});delete S.exGoal;
   if(!S.exNotes||typeof S.exNotes!=='object')S.exNotes={};
+  // 1.0.24: Test-Katalog. Ältere Stände ohne diese Felder: alle eingebauten Tests, keine eigenen, „im Assessment“ wie im Katalog.
+  // Eigene Tests ohne Namen oder mit dem Namen eines vorhandenen Tests fallen weg; fehlende Angaben bekommen den Standard.
+  S.testDeleted=Array.isArray(S.testDeleted)?S.testDeleted.filter(n=>typeof n==='string'):[];
+  if(!S.testAssess||typeof S.testAssess!=='object'||Array.isArray(S.testAssess))S.testAssess={};
+  {const da=new Set(TESTS.filter(t=>!S.testDeleted.includes(t.n)).map(t=>testKey(t.n)));
+   S.customTests=(Array.isArray(S.customTests)?S.customTests:[]).filter(t=>{if(!t||typeof t!=='object'||typeof t.n!=='string'||!t.n.trim()||da.has(testKey(t.n)))return false;
+     da.add(testKey(t.n));if(typeof t.u!=='string')t.u='';if(!TEST_GRUPPEN.includes(t.g))t.g='Eigene';t.single=!!t.single;t.a=!!t.a;return true})}
   // leere Symptomliste ist erlaubt (alle gelöscht); nur ein fehlender Eintrag wird neu belegt
   if(!Array.isArray(S.symptoms))S.symptoms=SYM_SEED.map(s=>Object.assign({},s));
   Object.values(S.days).forEach(dd=>{if(!dd.sy||Array.isArray(dd.sy))dd.sy={};if(!dd.syA||Array.isArray(dd.syA))dd.syA={};if(!Array.isArray(dd.extra))dd.extra=[];['done','abw','notes','tests','chips','planned'].forEach(f=>{if(!Array.isArray(dd[f]))dd[f]=[]});dd.done.forEach(a=>(a.ex||[]).forEach(migR))});
@@ -816,7 +841,9 @@ function freshState(){
     exTests:TEST?{e1:[{test:'Gestrecktes Beinheben (SLR)',side:'l'}],e6:[{test:'Gestrecktes Beinheben (SLR)',side:'l'},{test:'Hüftbeugung',side:'r'}],e2:[{test:'Hüftbeugung',side:'r'}]}:{},
     // datierte Notizen je Übung (nicht die Kurznotiz in der Einheit, nicht das Tagesjournal)
     exNotes:TEST?{e4:[{d:iso(addD(today,-3)),t:'Verdacht: danach Knie außen r schlechter. Nochmal gezielt mit Retest prüfen.'}]}:{},
-    rettung:RETT_SEED()};
+    rettung:RETT_SEED(),
+    // Test-Katalog (1.0.24): eigene Tests, gelöschte eingebaute Tests, „im Assessment“ abweichend vom Standard
+    customTests:[],testDeleted:[],testAssess:{}};
   resetContent(); initPlan(); S.days=TEST?seedDays():{}; fixKalRows(); ensureDay(iso(today));
 }
 // Gespeicherter Stand, der sich nicht lesen lässt, wird nicht überschrieben, sondern unter STORE_KEY+'-defekt' gesichert
@@ -1814,7 +1841,7 @@ sheet.addEventListener('click',()=>{const k=sheet.dataset.bibk;if(k)BIBY[k]=shee
 function lastAssess(){
   const ks=Object.keys(S.days).filter(k=>k<=iso(today)&&(S.days[k].tests||[]).length).sort();
   if(ks.length)return dfmt(ks[ks.length-1]);
-  let best=null;Object.values(TESTVALS).forEach(v=>v.forEach(x=>{const key=x[0].split('.').reverse().join('');if(!best||key>best.key)best={key,d:x[0]}}));
+  let best=null;testList().map(t=>testVals(t.n)).forEach(v=>v.forEach(x=>{const key=x[0].split('.').reverse().join('');if(!best||key>best.key)best={key,d:x[0]}}));
   return best?best.d:null;
 }
 function rBib(){
@@ -1922,13 +1949,15 @@ function openBibSheet(kind,keep){
         ${open?`<div class="vdet">${(v.blocks||[]).map(vb=>`<div class="vblock"><h2>${esc(vb.name)} <span class="act ${vb.type}">${TYPES[vb.type].l}</span></h2><div class="list">${vb.items.map(([id,pr,sd])=>{const e=exById(id);if(!e)return `<div class="item exweg"><span class="act" style="color:var(--ink3);box-shadow:inset 0 0 0 1px var(--line)">–</span><div class="t"><b style="color:var(--ink3);font-weight:600">gelöschte Übung</b><small>${sideLbl(sd).replace(/^ · /,'')}</small></div></div>`;return `<div class="item"><span class="act ${e.cat}">${e.cat}</span><div class="t"><b>${esc(e.name)}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small>${doseStr(e.d)}${sideLbl(sd)||(e.side==='getrennt'?' · L/R':'')}</small></div></div>`}).join('')||'<div class="hint">leer</div>'}</div></div>`).join('')||'<div class="hint">Keine Blöcke.</div>'}</div>`:''}
         </div><span>${open?'▾':'▸'}</span></div>`}).join('')}</div></section>`;
   } else {
-    const groups=['Table','Bewegung','Eigene'];
-    // Datumsspalten: zwei Beispielspalten (TESTVALS), Tage mit Messungen (außer heute), rechts „heute“; höchstens 6, die neuesten
+    // 1.0.24: Katalog aus testList() (eingebaut ohne gelöschte, dazu eigene); Gruppen ohne Test entfallen
+    const TL=testList();
+    const groups=TEST_GRUPPEN.filter(g=>TL.some(t=>t.g===g));
+    // Datumsspalten: zwei Beispielspalten (TESTVALS, nur solange ein Test dort einen Wert hat), Tage mit Messungen (außer heute), rechts „heute“; höchstens 6, die neuesten
     const tk=iso(today);
     const exIso=l=>{const [dd,mm]=l.split('.');const y=today.getFullYear();const k=`${y}-${mm}-${dd}`;return k>tk?`${y-1}-${mm}-${dd}`:k};
     const dayVal=(k,n)=>{const ts=(S.days[k].tests||[]).filter(x=>x.n===n);return ts.length?ts[ts.length-1]:null};
     const cm=new Map();
-    if(TEST)['20.08.','03.09.'].forEach(l=>cm.set(exIso(l),{lbl:l,val:n=>{const x=(TESTVALS[n]||[]).find(v=>v[0]===l);return x?{l:x[1],r:x[2]}:null},miss:'–'}));
+    if(TEST)['20.08.','03.09.'].forEach(l=>{if(TL.some(t=>testVals(t.n).some(v=>v[0]===l)))cm.set(exIso(l),{lbl:l,val:n=>{const x=testVals(n).find(v=>v[0]===l);return x?{l:x[1],r:x[2]}:null},miss:'–'})});
     Object.keys(S.days).filter(k=>k<tk&&(S.days[k].tests||[]).length).forEach(k=>cm.set(k,{lbl:dfmt(k),val:n=>dayVal(k,n),miss:'–'}));
     const cols=[...[...cm.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-5).map(([k,c])=>Object.assign({k},c)),{k:tk,lbl:'heute',val:n=>dayVal(tk,n),miss:'·'}];
     // Plan-Version, die an diesem Datum galt; „heute“ = aktuelle Version
@@ -1938,10 +1967,11 @@ function openBibSheet(kind,keep){
     const rtDiff=rt=>rtSides(rt).map(([s,a,b])=>`<span style="white-space:nowrap">${s?s+' ':''}${rtDelta(rt.test,a,b,true)||esc(a)+'→'+esc(b)}</span>`).join(' · ');
     const rtLine=t=>{const es=Object.entries(rtLast[t.n]||{}).filter(([id])=>exById(id)).sort((a,b)=>b[1].k.localeCompare(a[1].k)).slice(0,4);if(!es.length)return '';
       return `<div class="rtest"><b>${esc(testShort(t.n))}</b> · ${es.map(([id,o])=>`<span class="rte"><button class="rtex" data-rtex="${id}">${esc(exById(id).name)}</button> ${rtDiff(o.rt)} <span style="white-space:nowrap">(${dfmt(o.k)})</span></span>`).join(' · ')}</div>`};
-    const rtBlock=g=>{const rows=TESTS.filter(t=>t.g===g).map(rtLine).join('');return rows?`<div class="rtblock"><span class="ftl">Retests</span>${rows}</div>`:''};
-    const keinTest=cols.length===1&&!TESTS.some(t=>cols[0].val(t.n));
-    html=`${keinTest?'<div class="hint" id="testsEmpty">Noch keine Messung. „Assessment starten“ misst die neun Tests der Vorlage nacheinander, „Einzeltest“ einen einzelnen.</div>':''}<div class="row between"><div class="hint">Tabelle wie in der Trainer-Vorlage. Spalten = Messdaten, L / R.</div><div class="row" style="gap:8px"><button class="btn primary" id="assess">Assessment starten</button><button class="btn ghost" id="einzel">Einzeltest</button></div></div>
-    ${groups.map(g=>`<section class="card"><h2>${g==='Table'?'Table Tests (Grad)':g==='Bewegung'?'Bewegungstests (cm)':'Eigene Tests'}</h2><div class="matrix-wrap"><table class="matrix tests"><thead><tr><th>Test</th>${cols.map(c=>`<th colspan="2">${c.lbl}${pvAt(c)}</th>`).join('')}</tr></thead><tbody>${TESTS.filter(t=>t.g===g).map(t=>`<tr><td>${t.n}<br><span class="hint">${t.u}</span></td>${cols.map(c=>{const v=c.val(t.n);return v?`<td>${esc(v.l)}</td><td>${esc(v.r)}</td>`:`<td>${c.miss}</td><td>${c.miss}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${rtBlock(g)}</section>`).join('')}`;
+    const rtBlock=g=>{const rows=TL.filter(t=>t.g===g).map(rtLine).join('');return rows?`<div class="rtblock"><span class="ftl">Retests</span>${rows}</div>`:''};
+    const keinTest=cols.length===1&&!TL.some(t=>cols[0].val(t.n));
+    // Testname in der Tabelle: Tipp öffnet den Test („im Assessment“, „Test löschen“)
+    html=`${keinTest?`<div class="hint" id="testsEmpty">${TL.length?'Noch keine Messung. „Assessment starten“ misst die Tests mit „im Assessment“ nacheinander, „Einzeltest“ einen einzelnen.':'Kein Test vorhanden. „+ Test“ legt einen an.'}</div>`:''}<div class="row between"><div class="hint">Tabelle wie in der Trainer-Vorlage. Spalten = Messdaten, L / R. Tipp auf einen Test: im Assessment, löschen.</div><div class="row" style="gap:8px"><button class="btn primary" id="assess">Assessment starten</button><button class="btn ghost" id="einzel">Einzeltest</button><button class="chip sm" id="testNew">+ Test</button></div></div>
+    ${groups.map(g=>`<section class="card"><h2>${g==='Table'?'Table Tests (Grad)':g==='Bewegung'?'Bewegungstests (cm)':'Eigene Tests'}</h2><div class="matrix-wrap"><table class="matrix tests"><thead><tr><th>Test</th>${cols.map(c=>`<th colspan="2">${c.lbl}${pvAt(c)}</th>`).join('')}</tr></thead><tbody>${TL.filter(t=>t.g===g).map(t=>`<tr><td><button class="tname" data-tinfo="${TL.indexOf(t)}">${esc(t.n)}</button><br><span class="hint">${esc(t.u)}</span></td>${cols.map(c=>{const v=c.val(t.n);return v?`<td>${esc(v.l)}</td><td>${esc(v.r)}</td>`:`<td>${c.miss}</td><td>${c.miss}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${rtBlock(g)}</section>`).join('')}`;
   }
   const y=keep?(BIBY[kind]||0):0;
   openSheet(`<div class="daynav bshead"><h3>${T}</h3><button class="xbtn" id="bsX" aria-label="Schließen">✕</button></div>${html}`,true);
@@ -1976,10 +2006,14 @@ function openBibSheet(kind,keep){
   } else if(kind==='verlauf'){
     document.querySelectorAll('#sheet .vrow').forEach(r=>r.onclick=()=>{S.openV=S.openV===+r.dataset.v?null:+r.dataset.v;re()});
   } else {
-    document.getElementById('assess').onclick=()=>sub(()=>testSheet(TESTS.filter(t=>t.g!=='Eigene')));
+    // Assessment (1.0.24): alle Tests mit „im Assessment“ in der Reihenfolge des Katalogs
+    document.getElementById('assess').onclick=()=>{const al=testList().filter(testInAssess);if(!al.length){toast('Kein Test im Assessment');return}sub(()=>testSheet(al,true))};
     // Einzeltest: Auswahl aller Tests, Abbruch führt ins Tests-Sheet zurück
-    document.getElementById('einzel').onclick=()=>sub(()=>{openSheet(`<h3>Welcher Test?</h3><div class="list">${TESTS.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-t1="${i}"><div class="t"><b>${t.n}</b><small>${t.u}</small></div><span class="badge">${t.g}</span></button>`).join('')}</div>`);
-      document.querySelectorAll('#sheet [data-t1]').forEach(b=>b.onclick=()=>testSheet([TESTS[+b.dataset.t1]]))});
+    document.getElementById('einzel').onclick=()=>sub(()=>{const TL=testList();openSheet(`<h3>Welcher Test?</h3><div class="list">${TL.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-t1="${i}"><div class="t"><b>${esc(t.n)}</b><small>${esc(t.u)}</small></div><span class="badge">${t.g}</span></button>`).join('')||'<div class="hint">Kein Test vorhanden.</div>'}</div>`);
+      document.querySelectorAll('#sheet [data-t1]').forEach(b=>b.onclick=()=>testSheet([TL[+b.dataset.t1]]))});
+    // Test anlegen und Test öffnen (im Assessment, löschen); danach zurück ins Tests-Sheet
+    document.getElementById('testNew').onclick=()=>sub(()=>testNewSheet(re));
+    document.querySelectorAll('#sheet [data-tinfo]').forEach(b=>b.onclick=()=>{const t=testList()[+b.dataset.tinfo];if(t)sub(()=>testInfoSheet(t,re))});
     // Retests: Übungsname öffnet die Bibliothekskarte; ist sie durch den Filter ausgeblendet, gilt „Alle“
     document.querySelectorAll('#sheet [data-rtex]').forEach(b=>b.onclick=()=>{closeSheet();S.openEx=b.dataset.rtex;setTab('bib');
       if(!document.querySelector('#exl .ex.open')){S.bibFilter='alle';render()}
@@ -2260,19 +2294,19 @@ function lastTestVal(n,side){
   const ks=Object.keys(S.days).filter(k=>k<=iso(today)).sort().reverse();
   for(const k of ks){const ts=(S.days[k].tests||[]).filter(x=>x.n===n);for(let j=ts.length-1;j>=0;j--){if(ok(ts[j][side]))return ts[j][side]}
     const vs=[];(S.days[k].done||[]).forEach(a=>(a.ex||[]).forEach(i=>{if(i.rt&&i.rt.test===n&&i.rt.vor)vs.push(i.rt.vor)}));for(let j=vs.length-1;j>=0;j--){if(ok(vs[j][side]))return vs[j][side]}}
-  const v=TESTVALS[n]||[];for(let j=v.length-1;j>=0;j--){const x=v[j][side==='l'?1:2];if(ok(x))return x}
+  const v=testVals(n);for(let j=v.length-1;j>=0;j--){const x=v[j][side==='l'?1:2];if(ok(x))return x}
   return null;
 }
 const testNum=v=>{if(v==null)return null;if(typeof v==='number')return v;const m=String(v).replace(',','.').match(/-?\d+(\.\d+)?/);return m?+m[0]:null};
 // ---------- Ziele (Testwerte) ----------
-const testOf=n=>TESTS.find(t=>t.n===n);
-// einseitig gemessen: Kennzeichen im Test-Katalog (TESTS single)
+const testOf=n=>testList().find(t=>t.n===n);
+// einseitig gemessen: Kennzeichen im Test-Katalog (single)
 const testSingle=n=>!!(testOf(n)||{}).single;
 // Testname kurz: Klammerkürzel („Gestrecktes Beinheben (SLR)“ → „SLR“), sonst der Name
 const testShort=n=>{const m=String(n).match(/\(([^)]+)\)\s*$/);return m?m[1]:n};
 const goalName=z=>testShort(z.test)+(z.side==='l'?' links':z.side==='r'?' rechts':z.side==='a'?' · Seite der Ausführung':z.side==='g'?' · Gegenseite':z.side==='b'?' · beide Seiten':'');
 // Zahl in der Einheit des Tests; Texte wie „2 cm“ oder „ja“ unverändert
-function goalVal(n,v){if(v==null||v==='')return '–';if(typeof v!=='number')return String(v);const u=(testOf(n)||{}).u||'';const s=v.toLocaleString('de-DE');return u==='cm'?s+' cm':u==='s'?s+' s':/°/.test(u)?s+'°':s}
+function goalVal(n,v){if(v==null||v==='')return '–';if(typeof v!=='number')return String(v);const u=(testOf(n)||{}).u||'';const s=v.toLocaleString('de-DE');return u==='cm'?s+' cm':u==='s'?s+' s':u==='Wdh'?s+' Wdh':/°/.test(u)?s+'°':s}
 function goalLast(z){const v=lastTestVal(z.test,z.side||'l');return v==null?'noch kein Wert':'zuletzt '+goalVal(z.test,v)}
 function goalStr(z){return `${goalName(z)} · Ziel ${goalVal(z.test,z.target)} · ${goalLast(z)}`}
 // Abschnitte bleiben beim Umbruch zusammen („zuletzt 5 cm“ nicht zerrissen)
@@ -2307,7 +2341,8 @@ function goalSheet(z,after){
   const startVal=()=>{if(yn())return 'ja';const raw=lastTestVal(test,side||'l');if(/°/.test(unit())&&/cm/.test(String(raw||'')))return 0;const n=testNum(raw)??0;return stepOf()===5?Math.round(n/5)*5:n};
   const draw=()=>{
     const single=test&&testSingle(test);
-    const list=`<div class="list">${TESTS.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-gt="${i}"><div class="t"><b${t.n===test?' style="color:var(--accent)"':''}>${esc(t.n)}</b></div><span class="badge">${t.g}</span></button>`).join('')}</div>`;
+    const TL=testList();
+    const list=`<div class="list">${TL.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-gt="${i}"><div class="t"><b${t.n===test?' style="color:var(--accent)"':''}>${esc(t.n)}</b></div><span class="badge">${t.g}</span></button>`).join('')}</div>`;
     openSheet(`<h3>${z?'Ziel ändern':'Neues Ziel'}</h3>
     ${pick?`<div class="lbl">Test</div>${list}`:`<button class="goalpick" id="gtest"><span>Test: <b>${esc(testShort(test))}</b> <span class="go">· ändern</span></span></button>
     ${single?'':`<div class="row between"><span class="lbl">Seite</span><div class="chips">${[['l','links'],['r','rechts']].map(([k,l])=>`<button class="chip sm ${side===k?'on':''}" data-gs="${k}">${l}</button>`).join('')}</div></div>`}
@@ -2315,7 +2350,7 @@ function goalSheet(z,after){
       :`<div class="step"><button data-gv="-1" aria-label="Zielwert weniger">−</button><span id="gval">${goalVal(test,val)}</span><button data-gv="1" aria-label="Zielwert mehr">+</button></div>`}</div>
     <div class="hint">Der letzte Messwert erscheint neben dem Ziel.</div>
     <button class="btn primary wide" id="gsave">Speichern</button>${z?'<button class="btn danger wide" id="gdel">Ziel löschen</button>':''}`}`);
-    document.querySelectorAll('#sheet [data-gt]').forEach(b=>b.onclick=()=>{const t=TESTS[+b.dataset.gt];if(t.n!==test){test=t.n;if(testSingle(test))side='';else if(!side)side='l';val=startVal()}pick=false;draw()});
+    document.querySelectorAll('#sheet [data-gt]').forEach(b=>b.onclick=()=>{const t=TL[+b.dataset.gt];if(t.n!==test){test=t.n;if(testSingle(test))side='';else if(!side)side='l';val=startVal()}pick=false;draw()});
     if(pick)return;
     document.getElementById('gtest').onclick=()=>{pick=true;draw()};
     document.querySelectorAll('#sheet [data-gs]').forEach(b=>b.onclick=()=>{side=b.dataset.gs;document.querySelectorAll('#sheet [data-gs]').forEach(c=>c.classList.toggle('on',c===b))});
@@ -2339,7 +2374,8 @@ function exTestsSheet(e,after){
   let list=orig.map(t=>Object.assign({},t)), pick=false, test=null;
   const draw=()=>{
     const rows=list.map((t,i)=>`<div class="item goal"><div class="t"><b>${esc(goalName(t))}</b>${i===0?' <span class="badge">primär</span>':''}</div>${i>0?`<button class="chip sm" data-xtup="${i}" aria-label="${esc(goalName(t))} primär machen">↑</button>`:''}<button class="chip sm" data-xtrm="${i}" aria-label="${esc(goalName(t))} entfernen">−</button></div>`).join('')||'<div class="hint">Noch kein Test gewählt.</div>';
-    const tl=`<div class="list">${TESTS.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-xt="${i}"><div class="t"><b>${t.n}</b><small>${t.u}</small></div><span class="badge">${t.g}</span></button>`).join('')}</div>`;
+    const TL=testList();
+    const tl=`<div class="list">${TL.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-xt="${i}"><div class="t"><b>${esc(t.n)}</b><small>${esc(t.u)}</small></div><span class="badge">${t.g}</span></button>`).join('')}</div>`;
     openSheet(`<h3>Soll verbessern · ${esc(e.name)}</h3><div class="list">${rows}</div>
     ${test?`<div class="row between"><span class="lbl">Seite · ${esc(testShort(test))}</span><div class="chips">${(e.side==='getrennt'?[['a','Seite der Ausführung'],['g','Gegenseite']]:[['l','links'],['r','rechts'],['b','beide']]).map(([k,l])=>`<button class="chip sm" data-xs="${k}">${l}</button>`).join('')}</div></div>`
       :pick?`<div class="lbl">Test</div>${tl}`:'<button class="btn ghost wide" id="xtAdd">+ Test</button>'}
@@ -2347,13 +2383,86 @@ function exTestsSheet(e,after){
     const add=t=>{if(list.some(x=>x.test===t.test&&x.side===t.side))toast('Schon gewählt');else list.push(t);pick=false;test=null;draw()};
     document.querySelectorAll('#sheet [data-xtrm]').forEach(b=>b.onclick=()=>{list.splice(+b.dataset.xtrm,1);draw()});
     document.querySelectorAll('#sheet [data-xtup]').forEach(b=>b.onclick=()=>{const [t]=list.splice(+b.dataset.xtup,1);list.unshift(t);draw()});
-    document.querySelectorAll('#sheet [data-xt]').forEach(b=>b.onclick=()=>{const n=TESTS[+b.dataset.xt].n;if(testSingle(n))add({test:n,side:''});else{test=n;pick=false;draw()}});
+    document.querySelectorAll('#sheet [data-xt]').forEach(b=>b.onclick=()=>{const n=TL[+b.dataset.xt].n;if(testSingle(n))add({test:n,side:''});else{test=n;pick=false;draw()}});
     document.querySelectorAll('#sheet [data-xs]').forEach(b=>b.onclick=()=>add({test,side:b.dataset.xs}));
     const xa=document.getElementById('xtAdd');if(xa)xa.onclick=()=>{pick=true;draw()};
     document.getElementById('xtSave').onclick=()=>{
       if(JSON.stringify(list)===JSON.stringify(orig)){toast('Unverändert');after();return}
       S.exTests=S.exTests||{};if(list.length)S.exTests[e.id]=list;else delete S.exTests[e.id];
       addEvent(`${e.name} soll verbessern: ${list.map(goalName).join(', ')||'nichts gewählt'}`);save();toast('Gespeichert');after()};
+  };
+  draw();
+}
+// ---------- Test-Katalog pflegen (1.0.24, Entscheidung des Nutzers 08.10.2026, beide Kanäle) ----------
+// Test anlegen: Name (Pflicht, eindeutig), Einheit (Pflicht), Seiten (links/rechts oder ein Wert), Gruppe (Standard Eigene), „im Assessment“ (Standard aus).
+// Ein Tipp auf „Anlegen“ speichert; Auswahl ohne Neuzeichnen, damit der Fokus im Namensfeld bleibt. after() zeichnet das Tests-Sheet neu.
+function testNewSheet(after){
+  let u=null,single=false,g='Eigene',a=false;
+  openSheet(`<h3>Neuer Test</h3><input type="text" id="tnn" placeholder="Name" autocomplete="off">
+    <div class="lbl">Einheit</div><div class="chips" id="tnu">${TEST_EINHEITEN.map(x=>`<button class="chip sm" data-tnu="${esc(x)}" aria-pressed="false">${esc(x)}</button>`).join('')}</div>
+    <div class="lbl">Seiten</div><div class="chips" id="tns">${[['0','links und rechts'],['1','ein Wert']].map(([k,l])=>`<button class="chip sm ${k==='0'?'on':''}" data-tns="${k}" aria-pressed="${k==='0'}">${l}</button>`).join('')}</div>
+    <div class="lbl">Gruppe</div><div class="chips" id="tng">${TEST_GRUPPEN.map(x=>`<button class="chip sm ${x===g?'on':''}" data-tng="${x}" aria-pressed="${x===g}">${x}</button>`).join('')}</div>
+    <div class="row between"><span class="lbl">im Assessment</span><button class="chip sm" id="tna" aria-pressed="false">nein</button></div>
+    <button class="btn primary wide" id="tnsave">Anlegen</button>`);
+  const wahl=(attr,b)=>document.querySelectorAll(`#sheet [${attr}]`).forEach(c=>{const on=c===b;c.classList.toggle('on',on);c.setAttribute('aria-pressed',on)});
+  document.querySelectorAll('#sheet [data-tnu]').forEach(b=>b.onclick=()=>{u=b.dataset.tnu;wahl('data-tnu',b)});
+  document.querySelectorAll('#sheet [data-tns]').forEach(b=>b.onclick=()=>{single=b.dataset.tns==='1';wahl('data-tns',b)});
+  document.querySelectorAll('#sheet [data-tng]').forEach(b=>b.onclick=()=>{g=b.dataset.tng;wahl('data-tng',b)});
+  const ta=document.getElementById('tna');
+  ta.onclick=()=>{a=!a;ta.classList.toggle('on',a);ta.setAttribute('aria-pressed',a);ta.textContent=a?'ja':'nein'};
+  document.getElementById('tnsave').onclick=()=>{const n=document.getElementById('tnn').value.trim().replace(/\s+/g,' ');
+    if(!n){toast('Name fehlt');return}
+    if(testList().some(t=>testKey(t.n)===testKey(n))){toast('Test „'+n+'“ gibt es schon');return}
+    if(!u){toast('Einheit fehlt');return}
+    S.customTests=Array.isArray(S.customTests)?S.customTests:[];S.customTests.push({n,u,g,single,a});
+    if(S.testAssess)delete S.testAssess[n];
+    addEvent(`Test ${n}: angelegt`);save();toast('Test angelegt');after()};
+  const nf=document.getElementById('tnn'); if(nf)try{nf.focus({preventScroll:true})}catch(e){}
+}
+// Wo kommt der Test vor? Tage mit Messwerten (auch Beispielspalten), Retests (Einheiten aller Tage, laufende Einheit ohne Doppelzählung), Ziele, Übungen mit „Soll verbessern“
+function testUsage(n){
+  let tage=testVals(n).length, rt=0;
+  Object.values(S.days||{}).forEach(d=>{if(!d||typeof d!=='object')return;if((d.tests||[]).some(x=>x&&x.n===n))tage++;
+    (d.done||[]).forEach(a=>((a&&a.ex)||[]).forEach(i=>{if(i&&i.rt&&i.rt.test===n)rt++}))});
+  const s=S.session;
+  if(s&&Array.isArray(s.items)){const d=S.days[s.date],a=d&&Array.isArray(d.done)?d.done[findEntry(s.date,s.block)]:null;
+    s.items.forEach(i=>{if(i&&i.rt&&i.rt.test===n&&!(a&&(a.ex||[]).some(j=>j&&j.id===i.id&&j.rt&&j.rt.test===n)))rt++})}
+  const ziele=((S.plan&&S.plan.ziele)||[]).filter(z=>z&&z.test===n).length;
+  const ex=Object.keys(S.exTests||{}).filter(id=>(S.exTests[id]||[]).some(t=>t&&t.test===n)).length;
+  return {tage,rt,ziele,ex,any:!!(tage||rt||ziele||ex)};
+}
+// Test löschen: Messwerte aller Tage, Retests (auch in der laufenden Einheit und ihrem Schnappschuss), Ziele, „Soll verbessern“ und „im Assessment“.
+// Eingebaute Tests merkt S.testDeleted (bleiben weg, auch nach Update und im Export); „Beispieldaten zurücksetzen“ legt den Stand neu an.
+function removeTest(n){
+  const rtWeg=a=>((a&&Array.isArray(a.ex))?a.ex:[]).forEach(i=>{if(i&&i.rt&&i.rt.test===n)delete i.rt});
+  Object.values(S.days||{}).forEach(d=>{if(!d||typeof d!=='object')return;
+    if(Array.isArray(d.tests))d.tests=d.tests.filter(x=>!(x&&x.n===n));
+    if(Array.isArray(d.done))d.done.forEach(rtWeg)});
+  const s=S.session;
+  if(s){if(Array.isArray(s.items))s.items.forEach(i=>{if(i&&i.rt&&i.rt.test===n)delete i.rt});
+    if(s.snapshot!=null){try{const a=JSON.parse(s.snapshot);if(a&&typeof a==='object'){rtWeg(a);s.snapshot=JSON.stringify(a)}}catch(x){}}}
+  if(S.plan&&Array.isArray(S.plan.ziele))S.plan.ziele=S.plan.ziele.filter(z=>!(z&&z.test===n));
+  Object.keys(S.exTests||{}).forEach(id=>{const l=(S.exTests[id]||[]).filter(t=>!(t&&t.test===n));if(l.length)S.exTests[id]=l;else delete S.exTests[id]});
+  if(Array.isArray(S.customTests))S.customTests=S.customTests.filter(t=>!(t&&t.n===n));
+  if(TESTS.some(t=>t.n===n)){S.testDeleted=Array.isArray(S.testDeleted)?S.testDeleted:[];if(!S.testDeleted.includes(n))S.testDeleted.push(n)}
+  if(S.testAssess)delete S.testAssess[n];
+  addEvent(`Test ${n}: gelöscht`);
+}
+// Test öffnen (Tipp auf den Namen in der Tabelle): Angaben, Schalter „im Assessment“ (ein Tipp, speichert sofort), ganz unten „Test löschen“ mit genau einer Rückfrage
+function testInfoSheet(t,after){
+  const draw=()=>{const an=testInAssess(t);
+    openSheet(`<h3>${esc(t.n)}</h3><div class="hint" id="tiAngaben">${[t.u?'Einheit '+esc(t.u):'',t.single?'ein Wert':'links und rechts','Gruppe '+esc(t.g)].filter(Boolean).join(' · ')}</div>
+    <div class="row between"><span class="lbl">im Assessment</span><button class="chip sm ${an?'on':''}" id="tia" aria-pressed="${an}">${an?'ja':'nein'}</button></div>
+    <div style="margin-top:22px"><button class="btn danger wide" id="tidel">Test löschen</button></div>`);
+    document.getElementById('tia').onclick=()=>{S.testAssess=S.testAssess&&typeof S.testAssess==='object'?S.testAssess:{};
+      if(!an===!!t.a)delete S.testAssess[t.n];else S.testAssess[t.n]=!an;save();toast(!an?'Im Assessment':'Nicht im Assessment');draw()};
+    document.getElementById('tidel').onclick=()=>{const us=testUsage(t.n);
+      const mess=[us.tage?us.tage+(us.tage===1?' Tag':' Tagen'):'',us.rt?us.rt+(us.rt===1?' Retest':' Retests'):''].filter(Boolean);
+      const teile=[mess.length?'Messwerte '+(us.tage?'an ':'aus ')+mess.join(' und '):'',us.ziele?us.ziele+(us.ziele===1?' Ziel':' Ziele'):'',us.ex?'„Soll verbessern“ bei '+us.ex+(us.ex===1?' Übung':' Übungen'):''].filter(Boolean);
+      const liste=teile.length>1?teile.slice(0,-1).join(', ')+' und '+teile[teile.length-1]:teile[0];
+      const ein=TESTS.includes(t)?' Der eingebaute Test bleibt danach weg, auch nach Updates.':'';
+      const body=us.any?`<div class="warn" id="tdelWo">Mit entfernt werden: ${liste}.${ein}</div>`:`<div class="hint" id="tdelWo">Zu diesem Test gibt es keine Messwerte, Ziele oder „Soll verbessern“.${ein}</div>`;
+      confirmSheet('Test „'+esc(t.n)+'“ löschen?',()=>{removeTest(t.n);save();toast('Test gelöscht');after()},'Löschen',body)};
   };
   draw();
 }
@@ -2373,7 +2482,8 @@ function measureSheet(t,opts){
   const sideRow=([sd,l])=>yn?`<div class="row between"><span class="lbl">${l}</span><div class="chips">${['ja','nein'].map(x=>`<button class="chip ${st[sd]===x?'on':''}" data-tyn="${sd}:${x}">${x}</button>`).join('')}</div></div>`
     :`<div class="row between"><span class="lbl">${l}</span><div class="step"><button data-ts="${sd}:-1" aria-label="${l} weniger">−</button><span id="tv-${sd}">${show(st[sd])}</span><button data-ts="${sd}:1" aria-label="${l} mehr">+</button></div></div>
       <input type="text" inputmode="decimal" id="tin-${sd}" placeholder="${l} in ${st.u}" hidden>`;
-  const hint=opts.hint!=null?opts.hint:(t.g==='Table'?'Table Test, Grad in 5°-Schritten':t.g==='Bewegung'?'Bewegungstest, Abstand in cm':'Eigener Test')+(yn?'':' · vorbelegt mit dem letzten Wert');
+  // 1.0.24: eigene Tests in Table oder Bewegung können eine andere Einheit haben; dann nur die Gruppe
+  const hint=opts.hint!=null?opts.hint:(t.g==='Table'?(/°/.test(t.u)?'Table Test, Grad in 5°-Schritten':'Table Test'):t.g==='Bewegung'?(t.u==='cm'?'Bewegungstest, Abstand in cm':'Bewegungstest'):'Eigener Test')+(yn?'':' · vorbelegt mit dem letzten Wert');
   openSheet(`<h3>${esc(opts.title)}</h3><div><b>${t.n}</b><div class="hint">${esc(hint)}</div></div>
   ${mixed?`<div class="row"><span class="lbl">Einheit</span><span class="seg"><button data-tu="°" class="${st.u==='°'?'on':''}">Grad</button><button data-tu="cm" class="${st.u==='cm'?'on':''}">cm</button></span><span class="hint">solange Beine abheben: cm</span></div>`:''}
   <div class="stack" id="tsides">${sides.map(sideRow).join('')}</div>
@@ -2389,10 +2499,12 @@ function measureSheet(t,opts){
   document.getElementById('tsave').onclick=()=>opts.cb({l:store(st.l),r:single?'–':store(st.r)});
   const sk=document.getElementById('tskip'); if(sk)sk.onclick=opts.onSkip;
 }
-function testSheet(list){
+// assess=true: Assessment (Titel „Assessment i/n“, auch bei nur einem Test), sonst Einzeltest
+function testSheet(list,assess){
+  if(!Array.isArray(list)||!list.length)return;
   let i=0; const vals=[];
   const draw=()=>{const t=list[i];
-    measureSheet(t,{title:list.length>1?`Assessment ${i+1}/${list.length}`:'Einzeltest',initial:{l:lastTestVal(t.n,'l'),r:lastTestVal(t.n,'r')},
+    measureSheet(t,{title:assess?`Assessment ${i+1}/${list.length}`:'Einzeltest',initial:{l:lastTestVal(t.n,'l'),r:lastTestVal(t.n,'r')},
       saveLabel:i<list.length-1?'Weiter':'Speichern',note:true,onSkip:next,cb:val=>{vals.push({n:t.n,l:val.l,r:val.r});next()}})};
   const next=()=>{i++;if(i<list.length)draw();else{D().tests.push(...vals);closeSheet();toast(vals.length+(vals.length===1?' Test':' Tests')+' gespeichert');setTab('bib');openBibSheet('tests')}};
   draw();
@@ -2421,8 +2533,9 @@ function rtStart(it,after){
     cb:val=>{it.rt={test:t.n,vor:val,nach:null};closeSheet();after()}});
   const pt=exTests(it.id)[0]; const tz=pt&&testOf(pt.test);
   if(tz){go(tz);return}
-  openSheet(`<h3>Welcher Test?</h3><div class="list">${TESTS.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-t1="${i}"><div class="t"><b>${t.n}</b><small>${t.u}</small></div><span class="badge">${t.g}</span></button>`).join('')}</div>`);
-  document.querySelectorAll('#sheet [data-t1]').forEach(b=>b.onclick=()=>go(TESTS[+b.dataset.t1]));
+  const TL=testList();
+  openSheet(`<h3>Welcher Test?</h3><div class="list">${TL.map((t,i)=>`<button class="item" style="width:100%;text-align:left" data-t1="${i}"><div class="t"><b>${esc(t.n)}</b><small>${esc(t.u)}</small></div><span class="badge">${t.g}</span></button>`).join('')||'<div class="hint">Kein Test vorhanden.</div>'}</div>`);
+  document.querySelectorAll('#sheet [data-t1]').forEach(b=>b.onclick=()=>go(TL[+b.dataset.t1]));
 }
 function rtAfter(it,after){const t=testOf(it.rt.test);if(!t)return;
   measureSheet(t,{title:'Nachher · '+testShort(t.n),hint:'Vorbelegt mit dem Wert von vorher.',initial:it.rt.vor,cb:val=>{it.rt.nach=val;closeSheet();after()}})}
