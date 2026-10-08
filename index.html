@@ -369,6 +369,8 @@
   .zrow .zw{font-size:12px;color:var(--ink2)}
   .zleer{font-size:13px;color:var(--ink2)}
   /* zugeklappte Karte: Ziel-Kästchen unter dem Namen */
+  select.posf{width:auto;max-width:100%}
+  .ex .name small.posinfo{margin-top:2px;font-size:11.5px;color:var(--ink3)}
   .zchips{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:5px}
   .zchips .zl{font-size:11px;color:var(--ink2);margin-right:2px}
   .zchip{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
@@ -555,7 +557,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.24';
+const APP_VERSION='1.0.25';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -649,23 +651,34 @@ const vidPh=id=>'https://example.com/video/'+id;
 function exSeed(){
   if(!TEST)return [];
   const arr=[
-  {id:'e1',name:'Liegender Läufer',cat:'K',region:'Becken / Hüfte',side:'getrennt',dose:'2 × 8 Atemzüge je Seite',tags:['Atmung','Knie-Vorschub'],status:'aktiv',cues:['Langsam ausatmen, Druck gleichmäßig halten','Fuß stabil, Gewicht mittig','Erst Spannung aufbauen, dann bewegen'],video:'https://youtu.be/aqz-KE-bpKQ'},
-  {id:'e2',name:'Wandstehen',cat:'K',region:'Becken',side:'beidseitig',dose:'3 × 60 s',tags:['Becken-Aufrichtung','Fußposition'],status:'aktiv',cues:['Rücken lang, Kopf neutral','Gewicht auf beide Füße verteilen'],video:'https://vimeo.com/1084537'},
-  {id:'e3',name:'90-90 Hiplift',cat:'K',region:'Becken',side:'beidseitig',dose:'3 × 5 Atemzüge',tags:['Atmung','Knie-Vorschub'],status:'aktiv',cues:['Ruhig atmen, Schultern locker']},
-  {id:'e4',name:'Kniestand',cat:'K',region:'Hüfte',side:'getrennt',dose:'2 × 45 s je Seite',tags:['Becken-Aufrichtung'],status:'testphase',cues:[],video:vidPh('e4'),first:'12.09.'},
-  {id:'e5',name:'Goblet Squat mit Fersenkeil',cat:'I',region:'Ganzkörper',side:'beidseitig',dose:'3 × 8',tags:['Fußposition','Knie-Vorschub'],status:'aktiv',cues:['Knie in Richtung Fußspitze, Rücken gerade'],video:vidPh('e5')},
+  {id:'e1',name:'Liegender Läufer',cat:'K',pos:1,region:'Becken / Hüfte',side:'getrennt',dose:'2 × 8 Atemzüge je Seite',tags:['Atmung','Knie-Vorschub'],status:'aktiv',cues:['Langsam ausatmen, Druck gleichmäßig halten','Fuß stabil, Gewicht mittig','Erst Spannung aufbauen, dann bewegen'],video:'https://youtu.be/aqz-KE-bpKQ'},
+  {id:'e2',name:'Wandstehen',cat:'K',pos:10,region:'Becken',side:'beidseitig',dose:'3 × 60 s',tags:['Becken-Aufrichtung','Fußposition'],status:'aktiv',cues:['Rücken lang, Kopf neutral','Gewicht auf beide Füße verteilen'],video:'https://vimeo.com/1084537'},
+  {id:'e3',name:'90-90 Hiplift',cat:'K',pos:2,region:'Becken',side:'beidseitig',dose:'3 × 5 Atemzüge',tags:['Atmung','Knie-Vorschub'],status:'aktiv',cues:['Ruhig atmen, Schultern locker']},
+  {id:'e4',name:'Kniestand',cat:'K',pos:9,region:'Hüfte',side:'getrennt',dose:'2 × 45 s je Seite',tags:['Becken-Aufrichtung'],status:'testphase',cues:[],video:vidPh('e4'),first:'12.09.'},
+  {id:'e5',name:'Goblet Squat mit Fersenkeil',cat:'I',pos:10,region:'Ganzkörper',side:'beidseitig',dose:'3 × 8',tags:['Fußposition','Knie-Vorschub'],status:'aktiv',cues:['Knie in Richtung Fußspitze, Rücken gerade'],video:vidPh('e5')},
   {id:'e6',name:'Glute Max',cat:'I',region:'Hüfte',side:'getrennt',dose:'3 × 10 je Seite',tags:['Knie-Vorschub'],status:'aktiv',cues:['Langsam und kontrolliert bewegen']},
-  {id:'e7',name:'ISO Squat Hold',cat:'I',region:'Ganzkörper',side:'beidseitig',dose:'2 × 90 s',tags:['Atmung'],status:'aktiv',cues:[]},
+  {id:'e7',name:'ISO Squat Hold',cat:'I',pos:10,region:'Ganzkörper',side:'beidseitig',dose:'2 × 90 s',tags:['Atmung'],status:'aktiv',cues:[]},
   {id:'e8',name:'Ellbow Pullapart',cat:'K',region:'Brustkorb / Nacken',side:'beidseitig',dose:'2 × 12',tags:['Brustkorb-Rotation'],status:'aktiv',cues:['Schultern tief halten']},
   {id:'e9',name:'Camporini Deadlift',cat:'I',region:'Hüfte',side:'getrennt',dose:'3 × 6',tags:[],status:'geparkt',cues:['Hüfte bleibt ruhig, Rücken gerade']},
   {id:'e10',name:'Achsel riechen',cat:'K',region:'Nacken',side:'getrennt',dose:'5 Atemzüge je Seite',tags:['Atmung'],status:'aktiv',cues:[]},
-  {id:'e11',name:'Invertierter Vierfüßler',cat:'K',region:'Brustkorb',side:'beidseitig',dose:'2 × 8',tags:[],status:'verworfen',cues:[]},
+  {id:'e11',name:'Invertierter Vierfüßler',cat:'K',pos:5,region:'Brustkorb',side:'beidseitig',dose:'2 × 8',tags:[],status:'verworfen',cues:[]},
   ];
   const DOSE={e1:{sets:2,n:8,u:'Atemzüge'},e2:{sets:3,n:60,u:'s'},e3:{sets:3,n:5,u:'Atemzüge'},e4:{sets:2,n:45,u:'s'},e5:{sets:3,n:8,u:'Wdh',kg:16},e6:{sets:3,n:10,u:'Wdh'},e7:{sets:2,n:90,u:'s'},e8:{sets:2,n:12,u:'Wdh'},e9:{sets:3,n:6,u:'Wdh',kg:20},e10:{sets:1,n:5,u:'Atemzüge'},e11:{sets:2,n:8,u:'Wdh'}};
   arr.forEach(e=>{e.d=DOSE[e.id]||{sets:1,n:1,u:'Wdh'}});
   return arr;
 }
 const EX = exSeed();
+// Position der Übung (Wunsch 08.10.2026): feste Liste mit Nummer; e.pos = Nummer oder fehlt. info nur auf Tipp in der offenen Karte.
+const POS=[[1,'Rückenlage','supine'],[2,'Hooklying',''],[3,'Seitlage','side lying'],[4,'Bauchlage','prone'],
+  [5,'Vierfüßler','quadruped; inkl. Lazy Bear und, als Umkehrvariante (Hüften über Schultern), Inverted Lazy Bear'],
+  [6,'Niedriger Sitz/Stütz','low oblique sit, auf dem Ellbogen'],[7,'Hoher Sitz/Stütz','high oblique sit, auf der Hand'],
+  [8,'Kniestand beidbeinig','tall kneeling'],[9,'Halber Kniestand','half kneeling; Modifikatoren: hinteres Knie erhöht, front side open, back side open'],
+  [10,'Stand','standing, beidbeinig'],[11,'Ausfallschritt','split stance; Tiefe/Stagger als Modifikator, vom breiten Stagger bis zum tiefen 90/90-Boden'],
+  [12,'Einbeinstand','single-leg; Marsch/Knieheben'],
+  [13,'Dynamisch','integrated: Bewegungen, die durch mehrere Positionen/Phasen laufen (Gehen, Rolling/Get-up, Squat über volle Range, Step-up, Skips, Sprünge, Richtungswechsel)']];
+const posOf=n=>POS.find(x=>x[0]===n)||null;
+const posName=n=>{const x=posOf(n);return x?x[0]+' '+x[1]:''};
+const posOpts=(sel,leer)=>`<option value="">${leer}</option>`+POS.map(([n,l])=>`<option value="${n}"${sel===n?' selected':''}>${n} ${esc(l)}</option>`).join('');
 const doseStr=d=>`${d.sets} × ${d.n} ${d.u}${d.kg!=null?' · '+d.kg.toLocaleString('de-DE')+' kg':''}`;
 const sameDose=(a,b)=>a.sets===b.sets&&a.n===b.n&&(a.kg??null)===(b.kg??null);
 // Ziele als Testwerte (S.plan.ziele): Beispiele nur im Testkanal
@@ -1530,17 +1543,19 @@ function sortable(list,onMove){
 let NEX_MORE=false;
 // Durchführung auf der Übungskarte: welche Tagesliste offen ist (je Übung 'g' gemacht, 'p' Probleme), nur für diese Sitzung
 let BILMODE={};
+let POSINFO=null; // Übung, deren Positions-Erläuterung gerade eingeblendet ist
 const tagChips=(sel,attr)=>`<div class="chips tagchips">${pzTags().map(t=>`<button class="chip sm ${sel.includes(t)?'on':''}" ${attr}="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(t)}</button>`).join('')}</div>`;
 function newExerciseSheet(cb){
-  let cat='K',side='beidseitig',u='Wdh',nm='',region='',video='',tags=[],status='testphase';
-  const keep=()=>{const i=document.getElementById('nn');if(i)nm=i.value;const r=document.getElementById('nreg');if(r)region=r.value;const v=document.getElementById('nvid');if(v)video=v.value};
+  let cat='K',side='beidseitig',u='Wdh',nm='',region='',video='',tags=[],status='testphase',pos=null;
+  const keep=()=>{const i=document.getElementById('nn');if(i)nm=i.value;const r=document.getElementById('nreg');if(r)region=r.value;const v=document.getElementById('nvid');if(v)video=v.value;const ps=document.getElementById('npos');if(ps)pos=ps.value===''?null:+ps.value};
   const draw=()=>{openSheet(`<h3>Neue Übung</h3><input type="text" id="nn" placeholder="Name" value="${esc(nm)}"><div class="lbl">Kategorie</div><div class="chips">${[['K','Korrektiv'],['I','Intensiv']].map(([k,l])=>`<button class="chip sm ${cat===k?'on':''}" data-c="${k}">${l}</button>`).join('')}</div>
     <div class="lbl">Seite</div><div class="chips">${['beidseitig','getrennt'].map(x=>`<button class="chip sm ${side===x?'on':''}" data-sd="${x}">${x}</button>`).join('')}</div>
     <div class="lbl">Dosierung</div><div class="row"><div class="step"><button data-nx="sets:-1">−</button><span id="ns">${sets} Sätze</span><button data-nx="sets:1">+</button></div><div class="step"><button data-nx="n:-1">−</button><span id="nr">${n} ${u}</span><button data-nx="n:1">+</button></div></div>
     <div class="chips">${['Wdh','s','Atemzüge'].map(x=>`<button class="chip sm ${u===x?'on':''}" data-u="${x}">${x}</button>`).join('')}</div>
     <div class="row between"><span class="lbl">Mit Gewicht</span><button class="chip sm" id="kgt">${kg!=null?kg+' kg':'nein'}</button></div>
-    <button class="tog" id="nmore" aria-expanded="${NEX_MORE}" style="font-size:13px">${NEX_MORE?'mehr ▾':'mehr ▸'} Region, Prinzip-Tags, Video, Status</button>
+    <button class="tog" id="nmore" aria-expanded="${NEX_MORE}" style="font-size:13px">${NEX_MORE?'mehr ▾':'mehr ▸'} Region, Position, Prinzip-Tags, Video, Status</button>
     ${NEX_MORE?`<div class="lbl">Region</div><input type="text" id="nreg" placeholder="z. B. Becken / Hüfte" value="${esc(region)}">
+    <div class="lbl">Position</div><select id="npos">${posOpts(pos,'keine')}</select>
     <div class="lbl">Prinzip-Tags</div>${tagChips(tags,'data-ntag')}
     <div class="lbl">Video-Link</div><input type="url" id="nvid" inputmode="url" placeholder="https://…" value="${esc(video)}">
     <div class="row between"><span class="lbl">Status</span><div class="chips">${['testphase','aktiv'].map(x=>`<button class="chip sm ${status===x?'on':''}" data-nst="${x}">${x}</button>`).join('')}</div></div>`:''}
@@ -1552,7 +1567,7 @@ function newExerciseSheet(cb){
     document.querySelectorAll('#sheet [data-ntag]').forEach(b=>b.onclick=()=>{const t=b.dataset.ntag;tags=tags.includes(t)?tags.filter(x=>x!==t):[...tags,t];b.classList.toggle('on',tags.includes(t));b.setAttribute('aria-pressed',tags.includes(t))});
     document.querySelectorAll('#sheet [data-nst]').forEach(b=>b.onclick=()=>{keep();status=b.dataset.nst;draw()});
     document.getElementById('nsave').onclick=()=>{keep();const name=nm.trim();if(!name){toast('Name fehlt');return}let sq=Date.now();while(EX.some(x=>x.id==='c'+sq)||(S.exDeleted||[]).includes('c'+sq))sq++;const id='c'+sq;
-      const e={id,name,cat,region:region.trim(),side,dose:'',tags:[...tags],status,cues:[],d:{sets,n,u,...(kg!=null?{kg}:{})},first:fmt(today)};const vu=normUrl(video);if(vu)e.video=vu;
+      const e={id,name,cat,region:region.trim(),side,dose:'',tags:[...tags],status,cues:[],d:{sets,n,u,...(kg!=null?{kg}:{})},first:fmt(today)};const vu=normUrl(video);if(vu)e.video=vu;if(pos)e.pos=pos;
       EX.push(e);S.customEx=S.customEx||[];S.customEx.push(e);addEvent(name+': neu angelegt ('+(status==='aktiv'?'aktiv':'Testphase')+')');closeSheet();toast('Übung angelegt');cb(id)};
   }; let sets=2,n=8,kg=null; draw();
   // Name zuerst: Fokus ins Namensfeld beim Öffnen (spart einen Tipp)
@@ -1612,14 +1627,15 @@ function removeExercise(id){
 // Übung bearbeiten: Name, Kategorie, Region, Seite, Prinzip-Tags, Video-Link, Dosierung (vorhandenes Dosis-Sheet). Speichern ohne Rückfrage.
 function exEditSheet(e){
   if(!e)return;
-  let nm=e.name,cat=e.cat,region=e.region||'',side=e.side,tags=[...e.tags],video=e.video||'';
-  const keep=()=>{const i=document.getElementById('en');if(i)nm=i.value;const r=document.getElementById('ereg');if(r)region=r.value;const v=document.getElementById('evid');if(v)video=v.value};
+  let nm=e.name,cat=e.cat,region=e.region||'',side=e.side,tags=[...e.tags],video=e.video||'',pos=posOf(e.pos)?e.pos:null;
+  const keep=()=>{const i=document.getElementById('en');if(i)nm=i.value;const r=document.getElementById('ereg');if(r)region=r.value;const v=document.getElementById('evid');if(v)video=v.value;const ps=document.getElementById('epos');if(ps)pos=ps.value===''?null:+ps.value};
   const draw=()=>{const us=exUsage(e.id);
     openSheet(`<h3>Übung bearbeiten</h3>
     <div class="lbl">Name</div><input type="text" id="en" value="${esc(nm)}" placeholder="Name">
     <div class="lbl">Kategorie</div><div class="chips">${[['K','Korrektiv'],['I','Intensiv']].map(([k,l])=>`<button class="chip sm ${cat===k?'on':''}" data-ecat="${k}">${l}</button>`).join('')}</div>
     <div class="lbl">Region</div><input type="text" id="ereg" placeholder="z. B. Becken / Hüfte" value="${esc(region)}">
     <div class="lbl">Seite</div><div class="chips">${['beidseitig','getrennt'].map(x=>`<button class="chip sm ${side===x?'on':''}" data-eside="${x}">${x}</button>`).join('')}</div>
+    <div class="lbl">Position</div><select id="epos">${posOpts(pos,'keine')}</select>
     <div class="lbl">Prinzip-Tags</div>${tagChips(tags,'data-etag')}
     <div class="lbl">Video-Link</div><input type="url" id="evid" inputmode="url" placeholder="https://…" value="${esc(video)}">
     <div class="row between"><span class="lbl">Dosierung</span><button class="chip sm" id="edose">${doseStr(e.d)} ✎</button></div>
@@ -1631,11 +1647,11 @@ function exEditSheet(e){
     // Dosis: vorhandenes Sheet (speichert sofort, Ereignis im Verlauf), danach zurück ins Bearbeiten mit den bisherigen Eingaben
     document.getElementById('edose').onclick=()=>{keep();doseSheet(e,draw)};
     document.getElementById('esave').onclick=()=>{keep();const name=nm.trim();if(!name){toast('Name fehlt');return}
-      const f={name,cat,region:region.trim(),side,tags:[...tags],video:normUrl(video)};
+      const f={name,cat,region:region.trim(),side,tags:[...tags],video:normUrl(video),pos};
       const ch=[];if(f.name!==e.name)ch.push(`umbenannt in „${f.name}“`);if(f.cat!==e.cat)ch.push('Kategorie '+TYPES[f.cat].l);if(f.side!==e.side)ch.push('Seite '+f.side);
-      if(f.region!==(e.region||''))ch.push('Region '+(f.region||'leer'));if(f.tags.join('|')!==e.tags.join('|'))ch.push('Prinzip-Tags '+(f.tags.join(', ')||'keine'));if(f.video!==(e.video||''))ch.push(f.video?'Video-Link':'Video-Link entfernt');
+      if(f.region!==(e.region||''))ch.push('Region '+(f.region||'leer'));if(f.tags.join('|')!==e.tags.join('|'))ch.push('Prinzip-Tags '+(f.tags.join(', ')||'keine'));if(f.video!==(e.video||''))ch.push(f.video?'Video-Link':'Video-Link entfernt');if(f.pos!==(posOf(e.pos)?e.pos:null))ch.push('Position '+(f.pos?posName(f.pos):'keine'));
       if(!ch.length){closeSheet();toast('Unverändert');return}
-      const alt=e.name; Object.assign(e,f); if(!e.video)delete e.video;
+      const alt=e.name; Object.assign(e,f); if(!e.video)delete e.video; if(!e.pos)delete e.pos;
       if(!(S.customEx||[]).some(c=>c.id===e.id)){S.exEdit=S.exEdit||{};S.exEdit[e.id]=f}
       addEvent(alt+': '+ch.join(', ')); save(); closeSheet(); toast('Übung gespeichert'); render()};
     const del=document.getElementById('edel');
@@ -1850,7 +1866,9 @@ function rBib(){
   const ni=S.inbox.length;
   const inb=ni?`<button class="inboxrow" id="inboxRow"><span>${ni} Notiz${ni===1?'':'en'} ohne Bezug</span><span class="go">zuordnen ›</span></button>`:'';
   const f=S.bibFilter||'alle';
-  const items=EX.filter(e=>f==='alle'||(f==='K'&&e.cat==='K')||(f==='I'&&e.cat==='I')||(f==='test'&&exStatus(e)==='testphase')||(f==='geparkt'&&['geparkt','verworfen'].includes(exStatus(e))));
+  const fp=S.bibPos??null; // Positionsfilter: null alle, 0 ohne Position, sonst Nummer
+  const items=EX.filter(e=>f==='alle'||(f==='K'&&e.cat==='K')||(f==='I'&&e.cat==='I')||(f==='test'&&exStatus(e)==='testphase')||(f==='geparkt'&&['geparkt','verworfen'].includes(exStatus(e))))
+    .filter(e=>fp==null||(fp===0?!posOf(e.pos):e.pos===fp));
   // Test-Retest: letzte 8 Paare, chronologisch; Tipp öffnet den Tag
   const rtRow=e=>{const ps=rtPairs(e.id).slice(-8);if(!ps.length)return '';
     return `<div class="rtrow exsec"><span class="ftl">Test-Retest</span><div class="rts">${ps.map(o=>`<button class="rtl" data-rtday="${o.k}">${dfmt(o.k)} · ${esc(testShort(o.rt.test))} · ${rtShort(o.rt)}</button>`).join('')}</div></div>`};
@@ -1877,8 +1895,8 @@ function rBib(){
   const zielChips=e=>{const ts=exTests(e.id);return ts.length&&S.openEx!==e.id?`<span class="zchips"><span class="zl">soll verbessern</span>${ts.map(t=>`<span class="zchip">${esc(goalName(t))}</span>`).join('')}</span>`:''};
   // leere Bibliothek (echter Kanal beim Start): nur Hinweis und „+ Neue Übung“, ohne Suche und Filter
   const leer=!EX.length;
-  main.innerHTML=nav+inb+(leer?'':`<input type="text" id="q" placeholder="Suchen, auch Spitznamen"><div class="chips">${[['alle','Alle'],['K','Korrektiv'],['I','Intensiv'],['test','Testphase'],['geparkt','Geparkt']].map(([k,l])=>`<button class="chip sm ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}</div>`)+`
-  <section class="card"><div class="list" id="exl">${leer?'<div class="hint" id="exEmpty">Noch keine Übungen. Lege die erste mit „+ Neue Übung“ an.</div>':items.length?'':'<div class="hint">Keine Übung in diesem Filter.</div>'}${items.map(e=>{const st=exStatus(e);const b=bilanz(e);const pb=planBlocksOf(e.id);const ip=pb.length>0;return `<div class="ex ${S.openEx===e.id?'open':''}"><div class="head"><button class="name" data-open="${e.id}"><b>${esc(e.name)} <span class="act ${e.cat}">${e.cat}</span> ${ip?`<span class="badge">im Plan · ${esc(pb.map(x=>x.name).join(', '))}</span>`:''} ${st!=='aktiv'?`<span class="badge ${st==='testphase'?'test':st}">${st}</span>`:''}</b><small>${[esc(e.region||''),doseStr(e.d)].filter(Boolean).join(' · ')}${e.side==='getrennt'?' · L/R':''}</small>${zielChips(e)}</button></div>
+  main.innerHTML=nav+inb+(leer?'':`<input type="text" id="q" placeholder="Suchen, auch Spitznamen"><div class="chips">${[['alle','Alle'],['K','Korrektiv'],['I','Intensiv'],['test','Testphase'],['geparkt','Geparkt']].map(([k,l])=>`<button class="chip sm ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}<select class="chip sm posf${fp!=null?' on':''}" id="posF" aria-label="Position">${posOpts(fp,'Position: alle')}<option value="0"${fp===0?' selected':''}>ohne Position</option></select></div>`)+`
+  <section class="card"><div class="list" id="exl">${leer?'<div class="hint" id="exEmpty">Noch keine Übungen. Lege die erste mit „+ Neue Übung“ an.</div>':items.length?'':'<div class="hint">Keine Übung in diesem Filter.</div>'}${items.map(e=>{const st=exStatus(e);const b=bilanz(e);const pb=planBlocksOf(e.id);const ip=pb.length>0;return `<div class="ex ${S.openEx===e.id?'open':''}"><div class="head"><button class="name" data-open="${e.id}"><b>${esc(e.name)} <span class="act ${e.cat}">${e.cat}</span> ${ip?`<span class="badge">im Plan · ${esc(pb.map(x=>x.name).join(', '))}</span>`:''} ${st!=='aktiv'?`<span class="badge ${st==='testphase'?'test':st}">${st}</span>`:''}</b><small>${[esc(e.region||''),doseStr(e.d)].filter(Boolean).join(' · ')}${e.side==='getrennt'?' · L/R':''}${posOf(e.pos)?` · <span class="pos">${esc(posName(e.pos))}</span>`:''}</small>${S.openEx===e.id&&POSINFO===e.id&&posOf(e.pos)?`<small class="posinfo">${esc(posOf(e.pos)[2])}</small>`:''}${zielChips(e)}</button></div>
     <div class="body">${zielSec(e)}
     <div class="exsec"><span class="ftl">Durchführung</span><div class="bilanz">${bilKachel(e,'g',b.n,'gemacht')}${bilKachel(e,'p',b.p,'Probleme')}</div>
     ${S.openEx===e.id&&BILMODE[e.id]?doneRow(e,BILMODE[e.id]):''}
@@ -1896,13 +1914,17 @@ function rBib(){
   document.querySelectorAll('[data-bibopen]').forEach(b=>b.onclick=()=>openBibSheet(b.dataset.bibopen));
   const ir=document.getElementById('inboxRow'); if(ir)ir.onclick=inboxSheet;
   document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.bibFilter=b.dataset.f;render()});
+  const pf=document.getElementById('posF'); if(pf)pf.onchange=()=>{S.bibPos=pf.value===''?null:+pf.value;save();render()};
   const qi=document.getElementById('q'); if(qi)qi.oninput=e=>{const v=e.target.value.toLowerCase();document.querySelectorAll('#exl .ex').forEach(it=>it.style.display=it.textContent.toLowerCase().includes(v)?'':'none')};
-  document.getElementById('newExBib').onclick=()=>newExerciseSheet(id=>{S.openEx=id;S.bibFilter='alle';render();const c=document.querySelector('#exl .ex.open');if(c)c.scrollIntoView({block:'nearest'})});
+  document.getElementById('newExBib').onclick=()=>newExerciseSheet(id=>{S.openEx=id;S.bibFilter='alle';S.bibPos=null;render();const c=document.querySelector('#exl .ex.open');if(c)c.scrollIntoView({block:'nearest'})});
   document.querySelectorAll('[data-exedit]').forEach(b=>b.onclick=()=>exEditSheet(exById(b.dataset.exedit)));
   document.querySelectorAll('[data-exziel]').forEach(b=>b.onclick=()=>exTestsSheet(exById(b.dataset.exziel),()=>{closeSheet();render()}));
   // Kachel antippen klappt die Tage auf, erneut antippen wieder zu; nur eine Liste je Übung
   document.querySelectorAll('[data-bil]').forEach(b=>b.onclick=()=>{const [id,m]=b.dataset.bil.split(':');BILMODE[id]=BILMODE[id]===m?null:m;render()});
-  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.openEx=S.openEx===b.dataset.open?null:b.dataset.open;render()});
+  // Tipp auf die Position in der offenen Karte blendet die Erläuterung ein bzw. aus, sonst auf/zu wie bisher
+  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=ev=>{const id=b.dataset.open,e=exById(id);
+    if(S.openEx===id&&ev.target.closest('.pos')&&e&&posOf(e.pos)&&posOf(e.pos)[2]){POSINFO=POSINFO===id?null:id;render();return}
+    S.openEx=S.openEx===id?null:id;POSINFO=null;render()});
   document.querySelectorAll('[data-rtday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.rtday));
   document.querySelectorAll('[data-exday]').forEach(b=>b.onclick=()=>daySheet(b.dataset.exday));
   // Notizen zur Übung: „+“ öffnet das Feld auf der Karte (bibNoteDone); Ändern und Löschen über noteEditSheet (auch im Training)
@@ -2016,7 +2038,7 @@ function openBibSheet(kind,keep){
     document.querySelectorAll('#sheet [data-tinfo]').forEach(b=>b.onclick=()=>{const t=testList()[+b.dataset.tinfo];if(t)sub(()=>testInfoSheet(t,re))});
     // Retests: Übungsname öffnet die Bibliothekskarte; ist sie durch den Filter ausgeblendet, gilt „Alle“
     document.querySelectorAll('#sheet [data-rtex]').forEach(b=>b.onclick=()=>{closeSheet();S.openEx=b.dataset.rtex;setTab('bib');
-      if(!document.querySelector('#exl .ex.open')){S.bibFilter='alle';render()}
+      if(!document.querySelector('#exl .ex.open')){S.bibFilter='alle';S.bibPos=null;render()}
       const c=document.querySelector('#exl .ex.open'),top=document.querySelector('.top');if(c)window.scrollBy(0,c.getBoundingClientRect().top-(top?top.getBoundingClientRect().bottom:0)-8)});
   }
 }
@@ -2653,7 +2675,7 @@ function exportData(fertig){
 // Aufbau: {app:'MF-Log', art:'uebungen', format:1, erstellt:'JJJJ-MM-TT', uebungen:[{name, kategorie:'K'|'I', seite:'beidseitig'|'getrennt',
 //   dosis:{saetze, anzahl, einheit:'Wdh'|'s'|'Atemzüge', kg?}, region?, prinzipTags?, video?, status?:'testphase'|'aktiv', cues?, notiz?}]}
 // Beschreibung für Menschen und Agenten: app/README.md, Abschnitt „Übungsdatei“. Prüfwerkzeug: app/tools/uebungen-pruefen.js (nutzt pruefeUebungen).
-const UEB_FELDER=['name','kategorie','seite','dosis','region','prinzipTags','video','status','cues','notiz'];
+const UEB_FELDER=['name','kategorie','seite','dosis','region','position','prinzipTags','video','status','cues','notiz'];
 const UEB_DOSIS=['saetze','anzahl','einheit','kg'];
 const UEB_EINHEITEN=['Wdh','s','Atemzüge'];
 const nameKey=v=>String(v||'').trim().toLowerCase();
@@ -2682,6 +2704,7 @@ function pruefeUebungen(obj){
       if(d.kg!=null&&(typeof d.kg!=='number'||!isFinite(d.kg)||d.kg<=0||d.kg>500))f('kg muss eine Zahl über 0 sein oder fehlen');
     }
     if(u.region!=null&&!txt(u.region))f('Region muss ein Text sein');
+    if(u.position!=null&&!posOf(u.position))f('Position muss eine Nummer von 1 bis '+POS.length+' sein');
     if(u.prinzipTags!=null&&(!Array.isArray(u.prinzipTags)||u.prinzipTags.some(t=>!pzHas(t))))f('Prinzip-Tags nur aus: '+pzTags().join(', '));
     if(u.video!=null&&!txt(u.video))f('Video muss ein Text sein');
     if(u.status!=null&&!['testphase','aktiv'].includes(u.status))f('Status muss „testphase“ oder „aktiv“ sein');
@@ -2692,6 +2715,7 @@ function pruefeUebungen(obj){
     const e={name,cat:u.kategorie,region:txt(u.region)?u.region.trim():'',side:u.seite,dose:'',tags:[...new Set(u.prinzipTags||[])],status:u.status||'testphase',
       cues:(u.cues||[]).map(c=>c.trim()),d:{sets:d.saetze,n:d.anzahl,u:d.einheit,...(d.kg!=null?{kg:d.kg}:{})}};
     const vu=normUrl(u.video); if(vu)e.video=vu;
+    if(u.position!=null)e.pos=u.position;
     if(txt(u.notiz)&&u.notiz.trim())e.notiz=u.notiz.trim();
     liste.push(e);
   });
@@ -2708,7 +2732,7 @@ function importUebungen(obj,fname){
   const da=new Set(EX.map(e=>nameKey(e.name)));
   const neu=liste.filter(e=>!da.has(nameKey(e.name))), alt=liste.filter(e=>da.has(nameKey(e.name)));
   openSheet(`<h3>Übungen importieren</h3><div class="impbox"><span>Datei: <b>${esc(fname)}</b></span><span><b>${neu.length}</b> neu · <b>${alt.length}</b> schon vorhanden</span></div>
-    ${neu.length?`<div class="list" id="uebNeu">${neu.map(e=>`<div class="item"><span class="act ${e.cat}">${e.cat}</span><div class="t"><b>${esc(e.name)}</b><small>${esc(doseStr(e.d))} · ${esc(e.side)}${e.tags.length?' · '+esc(e.tags.join(', ')):''}${e.cues.length?' · '+e.cues.length+(e.cues.length===1?' Cue':' Cues'):''}${e.video?' · Video':''} · ${esc(e.status)}</small></div></div>`).join('')}</div>`:''}
+    ${neu.length?`<div class="list" id="uebNeu">${neu.map(e=>`<div class="item"><span class="act ${e.cat}">${e.cat}</span><div class="t"><b>${esc(e.name)}</b><small>${esc(doseStr(e.d))} · ${esc(e.side)}${e.pos?' · '+esc(posName(e.pos)):''}${e.tags.length?' · '+esc(e.tags.join(', ')):''}${e.cues.length?' · '+e.cues.length+(e.cues.length===1?' Cue':' Cues'):''}${e.video?' · Video':''} · ${esc(e.status)}</small></div></div>`).join('')}</div>`:''}
     ${alt.length?`<div class="hint" id="uebAlt">Schon vorhanden, werden übersprungen: ${alt.map(e=>esc(e.name)).join(', ')}</div>`:''}
     ${neu.length?`<div class="hint">Fügt nur diese Übungen hinzu. Plan, Tage und alles andere in ${esc(APP_NAME)} bleiben unverändert.</div>
     <div class="row"><button class="btn primary" style="flex:1" id="uebYes">${neu.length===1?'1 Übung hinzufügen':neu.length+' Übungen hinzufügen'}</button></div>`:'<div class="hint">Nichts Neues in der Datei.</div>'}`);
