@@ -559,7 +559,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.27';
+const APP_VERSION='1.0.28';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -2321,8 +2321,9 @@ function aktEditSheet(dateIso,idx,after){
   draw();
 }
 // letzter bekannter Wert je Seite: zuerst Tageswerte (neueste zuerst; am selben Tag Assessment/Einzeltest vor Retest-Vorher-Wert), dann TESTVALS
-function lastTestVal(n,side){
-  const ok=v=>v!=null&&v!==''&&v!=='–'&&v!=='·';
+// want (1.0.28, für den Startwert eines Ziels bei Einheit „° / cm“): 'cm' nur Werte in cm, '°' nur Werte ohne cm; sonst jeder Wert
+function lastTestVal(n,side,want){
+  const ok=v=>v!=null&&v!==''&&v!=='–'&&v!=='·'&&(!want||(want==='cm')===/cm/.test(String(v)));
   const ks=Object.keys(S.days).filter(k=>k<=iso(today)).sort().reverse();
   for(const k of ks){const ts=(S.days[k].tests||[]).filter(x=>x.n===n);for(let j=ts.length-1;j>=0;j--){if(ok(ts[j][side]))return ts[j][side]}
     const vs=[];(S.days[k].done||[]).forEach(a=>(a.ex||[]).forEach(i=>{if(i.rt&&i.rt.test===n&&i.rt.vor)vs.push(i.rt.vor)}));for(let j=vs.length-1;j>=0;j--){if(ok(vs[j][side]))return vs[j][side]}}
@@ -2373,9 +2374,15 @@ function goalSheet(z,after){
   let test=z?z.test:null, side=z?(z.side||'l'):'l', val=z?z.target:null, pick=!z;
   const unit=()=>(testOf(test)||{}).u||'';
   const yn=()=>unit()==='ja/nein';
-  const stepOf=()=>/°/.test(unit())?5:1;
-  // Startwert bei neuer Testwahl: letzter Messwert in der Einheit des Tests, sonst 0
-  const startVal=()=>{if(yn())return 'ja';const raw=lastTestVal(test,side||'l');if(/°/.test(unit())&&/cm/.test(String(raw||'')))return 0;const n=testNum(raw)??0;return stepOf()===5?Math.round(n/5)*5:n};
+  // 1.0.28 (Wunsch des Nutzers 08.10.2026): bei „° / cm“ (Hüftbeugung) Ziel wahlweise in Grad oder cm. Grad als Zahl wie bisher, cm als Text „6 cm“ wie Messwerte.
+  const mixed=()=>unit()==='° / cm';
+  let gu=mixed()&&/cm/.test(String(val??''))?'cm':'°';
+  const stepOf=()=>mixed()?(gu==='cm'?1:5):/°/.test(unit())?5:1;
+  const zahl=v=>typeof v==='number'?v:(testNum(v)??0);
+  const ablegen=n=>mixed()&&gu==='cm'?n.toLocaleString('de-DE')+' cm':n;
+  // Startwert: letzter Messwert in der Einheit des Ziels (bei neuer Testwahl die Einheit des letzten Messwerts), sonst 0
+  const startVal=()=>{if(yn())return 'ja';if(mixed()){const n=testNum(lastTestVal(test,side||'l',gu))??0;return ablegen(gu==='°'?Math.round(n/5)*5:n)}
+    const raw=lastTestVal(test,side||'l');if(/°/.test(unit())&&/cm/.test(String(raw||'')))return 0;const n=testNum(raw)??0;return stepOf()===5?Math.round(n/5)*5:n};
   const draw=()=>{
     const single=test&&testSingle(test);
     const TL=testList();
@@ -2383,16 +2390,18 @@ function goalSheet(z,after){
     openSheet(`<h3>${z?'Ziel ändern':'Neues Ziel'}</h3>
     ${pick?`<div class="lbl">Test</div>${list}`:`<button class="goalpick" id="gtest"><span>Test: <b>${esc(testShort(test))}</b> <span class="go">· ändern</span></span></button>
     ${single?'':`<div class="row between"><span class="lbl">Seite</span><div class="chips">${[['l','links'],['r','rechts']].map(([k,l])=>`<button class="chip sm ${side===k?'on':''}" data-gs="${k}">${l}</button>`).join('')}</div></div>`}
+    ${mixed()?`<div class="row between"><span class="lbl">Einheit</span><span class="seg" id="gunit"><button data-gu="°" class="${gu==='°'?'on':''}">Grad</button><button data-gu="cm" class="${gu==='cm'?'on':''}">cm</button></span></div>`:''}
     <div class="row between"><span class="lbl">Zielwert</span>${yn()?`<div class="chips">${['ja','nein'].map(x=>`<button class="chip ${val===x?'on':''}" data-gyn="${x}">${x}</button>`).join('')}</div>`
       :`<div class="step"><button data-gv="-1" aria-label="Zielwert weniger">−</button><span id="gval">${goalVal(test,val)}</span><button data-gv="1" aria-label="Zielwert mehr">+</button></div>`}</div>
     <div class="hint">Der letzte Messwert erscheint neben dem Ziel.</div>
     <button class="btn primary wide" id="gsave">Speichern</button>${z?'<button class="btn danger wide" id="gdel">Ziel löschen</button>':''}`}`);
-    document.querySelectorAll('#sheet [data-gt]').forEach(b=>b.onclick=()=>{const t=TL[+b.dataset.gt];if(t.n!==test){test=t.n;if(testSingle(test))side='';else if(!side)side='l';val=startVal()}pick=false;draw()});
+    document.querySelectorAll('#sheet [data-gt]').forEach(b=>b.onclick=()=>{const t=TL[+b.dataset.gt];if(t.n!==test){test=t.n;if(testSingle(test))side='';else if(!side)side='l';if(mixed())gu=/cm/.test(String(lastTestVal(test,side||'l')??''))?'cm':'°';val=startVal()}pick=false;draw()});
     if(pick)return;
     document.getElementById('gtest').onclick=()=>{pick=true;draw()};
     document.querySelectorAll('#sheet [data-gs]').forEach(b=>b.onclick=()=>{side=b.dataset.gs;document.querySelectorAll('#sheet [data-gs]').forEach(c=>c.classList.toggle('on',c===b))});
     document.querySelectorAll('#sheet [data-gyn]').forEach(b=>b.onclick=()=>{val=b.dataset.gyn;document.querySelectorAll('#sheet [data-gyn]').forEach(c=>c.classList.toggle('on',c===b))});
-    document.querySelectorAll('#sheet [data-gv]').forEach(b=>b.onclick=()=>{val=Math.max(0,(typeof val==='number'?val:0)+(+b.dataset.gv)*stepOf());document.getElementById('gval').textContent=goalVal(test,val)});
+    document.querySelectorAll('#sheet [data-gv]').forEach(b=>b.onclick=()=>{val=ablegen(Math.max(0,zahl(val)+(+b.dataset.gv)*stepOf()));document.getElementById('gval').textContent=goalVal(test,val)});
+    document.querySelectorAll('#sheet [data-gu]').forEach(b=>b.onclick=()=>{if(gu===b.dataset.gu)return;gu=b.dataset.gu;val=startVal();draw()});
     document.getElementById('gsave').onclick=()=>{
       const nz={test,side:testSingle(test)?'':side,target:val};
       if(z){if(z.test===nz.test&&z.side===nz.side&&z.target===nz.target){toast('Ziel unverändert');after();return}Object.assign(z,nz)}
