@@ -370,6 +370,7 @@
   .zleer{font-size:13px;color:var(--ink2)}
   /* zugeklappte Karte: Ziel-Kästchen unter dem Namen */
   select.posf{width:auto;max-width:100%}
+  .tdesc{white-space:pre-line;font-size:14px;line-height:1.45;color:var(--ink)}
   .ex .name small.posinfo{margin-top:2px;font-size:11.5px;color:var(--ink3)}
   .zchips{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:5px}
   .zchips .zl{font-size:11px;color:var(--ink2);margin-right:2px}
@@ -557,7 +558,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.25';
+const APP_VERSION='1.0.26';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -702,6 +703,11 @@ function testList(){
   const gi=t=>{const i=TEST_GRUPPEN.indexOf(t.g);return i<0?TEST_GRUPPEN.length:i};
   return [...TESTS.filter(t=>!del.includes(t.n)),...eig].sort((a,b)=>gi(a)-gi(b));
 }
+// Beschreibung und Video eines Tests (beide optional, auch für eingebaute Tests)
+const testInfoOf=n=>(S&&S.testInfo&&S.testInfo[n])||{};
+function setTestInfo(n,f,v){S.testInfo=S.testInfo&&typeof S.testInfo==='object'?S.testInfo:{};const o=Object.assign({},S.testInfo[n]);
+  if(String(v||'').trim())o[f]=f==='video'?String(v).trim():String(v);else delete o[f];
+  if(o.text||o.video)S.testInfo[n]=o;else delete S.testInfo[n]}
 const testInAssess=t=>{const m=S&&S.testAssess;return !!t&&(m&&typeof m==='object'&&Object.prototype.hasOwnProperty.call(m,t.n)?!!m[t.n]:!!t.a)};
 // Beispiel-Messwerte (Testkanal) nur für eingebaute Tests, die nicht gelöscht sind
 const testVals=n=>S&&Array.isArray(S.testDeleted)&&S.testDeleted.includes(n)?[]:(TESTVALS[n]||[]);
@@ -830,6 +836,9 @@ function hydrate(obj){
   // Eigene Tests ohne Namen oder mit dem Namen eines vorhandenen Tests fallen weg; fehlende Angaben bekommen den Standard.
   S.testDeleted=Array.isArray(S.testDeleted)?S.testDeleted.filter(n=>typeof n==='string'):[];
   if(!S.testAssess||typeof S.testAssess!=='object'||Array.isArray(S.testAssess))S.testAssess={};
+  // 1.0.26: Beschreibung und Video-Link je Test (S.testInfo[Name] = {text, video}); unbrauchbare Einträge fallen weg
+  {const ti=S.testInfo&&typeof S.testInfo==='object'&&!Array.isArray(S.testInfo)?S.testInfo:{};S.testInfo={};
+   Object.entries(ti).forEach(([n,o])=>{if(!o||typeof o!=='object')return;const x={};if(typeof o.text==='string'&&o.text.trim())x.text=o.text;if(typeof o.video==='string'&&o.video.trim())x.video=o.video.trim();if(x.text||x.video)S.testInfo[n]=x})}
   {const da=new Set(TESTS.filter(t=>!S.testDeleted.includes(t.n)).map(t=>testKey(t.n)));
    S.customTests=(Array.isArray(S.customTests)?S.customTests:[]).filter(t=>{if(!t||typeof t!=='object'||typeof t.n!=='string'||!t.n.trim()||da.has(testKey(t.n)))return false;
      da.add(testKey(t.n));if(typeof t.u!=='string')t.u='';if(!TEST_GRUPPEN.includes(t.g))t.g='Eigene';t.single=!!t.single;t.a=!!t.a;return true})}
@@ -1993,7 +2002,7 @@ function openBibSheet(kind,keep){
     const keinTest=cols.length===1&&!TL.some(t=>cols[0].val(t.n));
     // Testname in der Tabelle: Tipp öffnet den Test („im Assessment“, „Test löschen“)
     html=`${keinTest?`<div class="hint" id="testsEmpty">${TL.length?'Noch keine Messung. „Assessment starten“ misst die Tests mit „im Assessment“ nacheinander, „Einzeltest“ einen einzelnen.':'Kein Test vorhanden. „+ Test“ legt einen an.'}</div>`:''}<div class="row between"><div class="hint">Tabelle wie in der Trainer-Vorlage. Spalten = Messdaten, L / R. Tipp auf einen Test: im Assessment, löschen.</div><div class="row" style="gap:8px"><button class="btn primary" id="assess">Assessment starten</button><button class="btn ghost" id="einzel">Einzeltest</button><button class="chip sm" id="testNew">+ Test</button></div></div>
-    ${groups.map(g=>`<section class="card"><h2>${g==='Table'?'Table Tests (Grad)':g==='Bewegung'?'Bewegungstests (cm)':'Eigene Tests'}</h2><div class="matrix-wrap"><table class="matrix tests"><thead><tr><th>Test</th>${cols.map(c=>`<th colspan="2">${c.lbl}${pvAt(c)}</th>`).join('')}</tr></thead><tbody>${TL.filter(t=>t.g===g).map(t=>`<tr><td><button class="tname" data-tinfo="${TL.indexOf(t)}">${esc(t.n)}</button><br><span class="hint">${esc(t.u)}</span></td>${cols.map(c=>{const v=c.val(t.n);return v?`<td>${esc(v.l)}</td><td>${esc(v.r)}</td>`:`<td>${c.miss}</td><td>${c.miss}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${rtBlock(g)}</section>`).join('')}`;
+    ${groups.map(g=>`<section class="card"><h2>${g==='Table'?'Table Tests (Grad)':g==='Bewegung'?'Bewegungstests':'Eigene Tests'}</h2><div class="matrix-wrap"><table class="matrix tests"><thead><tr><th>Test</th>${cols.map(c=>`<th colspan="2">${c.lbl}${pvAt(c)}</th>`).join('')}</tr></thead><tbody>${TL.filter(t=>t.g===g).map(t=>`<tr><td><button class="tname" data-tinfo="${TL.indexOf(t)}">${esc(t.n)}</button><br><span class="hint">${esc(t.u)}</span></td>${cols.map(c=>{const v=c.val(t.n);return v?`<td>${esc(v.l)}</td><td>${esc(v.r)}</td>`:`<td>${c.miss}</td><td>${c.miss}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${rtBlock(g)}</section>`).join('')}`;
   }
   const y=keep?(BIBY[kind]||0):0;
   openSheet(`<div class="daynav bshead"><h3>${T}</h3><button class="xbtn" id="bsX" aria-label="Schließen">✕</button></div>${html}`,true);
@@ -2468,14 +2477,28 @@ function removeTest(n){
   if(Array.isArray(S.customTests))S.customTests=S.customTests.filter(t=>!(t&&t.n===n));
   if(TESTS.some(t=>t.n===n)){S.testDeleted=Array.isArray(S.testDeleted)?S.testDeleted:[];if(!S.testDeleted.includes(n))S.testDeleted.push(n)}
   if(S.testAssess)delete S.testAssess[n];
+  if(S.testInfo)delete S.testInfo[n];
   addEvent(`Test ${n}: gelöscht`);
 }
 // Test öffnen (Tipp auf den Namen in der Tabelle): Angaben, Schalter „im Assessment“ (ein Tipp, speichert sofort), ganz unten „Test löschen“ mit genau einer Rückfrage
 function testInfoSheet(t,after){
-  const draw=()=>{const an=testInAssess(t);
+  // 1.0.26: Beschreibung und Video (optional). Anzeige als Text bzw. „▶ Video öffnen“; „bearbeiten“ öffnet Feld und Link, beides speichert beim Tippen, „fertig“ schließt
+  let ed=false, vorher=null;
+  const draw=()=>{const an=testInAssess(t), inf=testInfoOf(t.n), url=normUrl(inf.video);
+    const anzeige=(inf.text?`<div class="tdesc" id="tiText">${esc(inf.text)}</div>`:'')+(url?`<button class="btn ghost" id="tiVid">▶ Video öffnen</button>`:'')
+      +`<div class="row" style="justify-content:flex-end"><button class="tog" id="tiEd" style="font-size:13px">${inf.text||url?'Beschreibung und Video bearbeiten':'+ Beschreibung oder Video'}</button></div>`;
+    const feld=`<div class="lbl">Beschreibung</div><textarea id="tiTx" rows="8" placeholder="Ausführung, worauf achten, wie werten">${esc(inf.text||'')}</textarea>
+      <div class="lbl">Video-Link</div><input type="url" id="tiUrl" inputmode="url" placeholder="https://…" value="${esc(inf.video||'')}">
+      <div class="row" style="justify-content:flex-end"><button class="tog" id="tiOk" style="font-size:13px">fertig</button></div>`;
     openSheet(`<h3>${esc(t.n)}</h3><div class="hint" id="tiAngaben">${[t.u?'Einheit '+esc(t.u):'',t.single?'ein Wert':'links und rechts','Gruppe '+esc(t.g)].filter(Boolean).join(' · ')}</div>
+    ${ed?feld:anzeige}
     <div class="row between"><span class="lbl">im Assessment</span><button class="chip sm ${an?'on':''}" id="tia" aria-pressed="${an}">${an?'ja':'nein'}</button></div>
     <div style="margin-top:22px"><button class="btn danger wide" id="tidel">Test löschen</button></div>`);
+    const tv=document.getElementById('tiVid'); if(tv)tv.onclick=()=>openVideo(url);
+    const te=document.getElementById('tiEd'); if(te)te.onclick=()=>{ed=true;vorher=JSON.stringify(testInfoOf(t.n));draw();const x=document.getElementById('tiTx');if(x)try{x.focus({preventScroll:true})}catch(e){}};
+    const tx=document.getElementById('tiTx'); if(tx)tx.oninput=()=>{setTestInfo(t.n,'text',tx.value);save()};
+    const tu=document.getElementById('tiUrl'); if(tu)tu.oninput=()=>{setTestInfo(t.n,'video',tu.value);save()};
+    const ok=document.getElementById('tiOk'); if(ok)ok.onclick=()=>{fertig();draw()};
     document.getElementById('tia').onclick=()=>{S.testAssess=S.testAssess&&typeof S.testAssess==='object'?S.testAssess:{};
       if(!an===!!t.a)delete S.testAssess[t.n];else S.testAssess[t.n]=!an;save();toast(!an?'Im Assessment':'Nicht im Assessment');draw()};
     document.getElementById('tidel').onclick=()=>{const us=testUsage(t.n);
@@ -2486,6 +2509,13 @@ function testInfoSheet(t,after){
       const body=us.any?`<div class="warn" id="tdelWo">Mit entfernt werden: ${liste}.${ein}</div>`:`<div class="hint" id="tdelWo">Zu diesem Test gibt es keine Messwerte, Ziele oder „Soll verbessern“.${ein}</div>`;
       confirmSheet('Test „'+esc(t.n)+'“ löschen?',()=>{removeTest(t.n);save();toast('Test gelöscht');after()},'Löschen',body)};
   };
+  // Bearbeiten beenden: Link vervollständigen, Text am Ende trimmen; bei Änderung Toast und Verlauf
+  const fertig=()=>{if(!ed)return;ed=false;const inf=testInfoOf(t.n);
+    setTestInfo(t.n,'text',(inf.text||'').trim());setTestInfo(t.n,'video',normUrl(inf.video));
+    const neu=testInfoOf(t.n),alt=vorher?JSON.parse(vorher):{};
+    if(JSON.stringify(neu)!==JSON.stringify(alt)){const w=[(neu.text||'')!==(alt.text||'')?'Beschreibung':'',(neu.video||'')!==(alt.video||'')?'Video-Link':''].filter(Boolean).join(' und ');
+      addEvent(`Test ${t.n}: ${w} ${neu.text||neu.video?'geändert':'entfernt'}`);toast('Gespeichert')}
+    save()};
   draw();
 }
 // Einen Test messen (Assessment, Einzeltest, Test-Retest). opts: {title, hint, initial:{l,r} (gespeicherte Form, z. B. 60, „6 cm“, „ja“), cb(val)};
@@ -2746,6 +2776,59 @@ function importUebungen(obj,fname){
       addEvent(e.name+': neu angelegt (Import, '+(e.status==='aktiv'?'aktiv':'Testphase')+')')});
     save(); closeSheet(); render(); toast(neu.length===1?'1 Übung hinzugefügt':neu.length+' Übungen hinzugefügt')};
 }
+// Testdatei: {app:'MF-Log', art:'tests', format:1, tests:[{name, einheit, seiten, gruppe, assessment?, beschreibung?, video?}]}
+const TEST_FELDER=['name','einheit','seiten','gruppe','assessment','beschreibung','video'];
+function pruefeTests(obj){
+  const fehler=[], neu=[], info=[];
+  if(!obj||typeof obj!=='object'||obj.app!=='MF-Log'||obj.art!=='tests')return {fehler:['Keine MF-Log-Testdatei'],neu,info};
+  if(obj.format!==1)fehler.push('Unbekanntes Format „'+obj.format+'“, erwartet 1');
+  if(!Array.isArray(obj.tests)||!obj.tests.length){fehler.push('Die Datei enthält keine Tests');return {fehler,neu,info}}
+  const txt=v=>typeof v==='string', da=testList();
+  obj.tests.forEach((u,i)=>{
+    const nr='Test '+(i+1)+(u&&txt(u.name)&&u.name.trim()?' „'+u.name.trim()+'“':'');
+    if(!u||typeof u!=='object'||Array.isArray(u)){fehler.push(nr+': kein gültiger Eintrag');return}
+    const n0=fehler.length, f=m=>fehler.push(nr+': '+m);
+    const fremd=Object.keys(u).filter(k=>!TEST_FELDER.includes(k)); if(fremd.length)f('unbekannte Felder '+fremd.join(', '));
+    const name=txt(u.name)?u.name.trim().replace(/\s+/g,' '):''; if(!name)f('Name fehlt'); else if(name.length>80)f('Name länger als 80 Zeichen');
+    if(!TEST_EINHEITEN.includes(u.einheit))f('Einheit muss eine von '+TEST_EINHEITEN.join(', ')+' sein');
+    if(!['links und rechts','ein Wert'].includes(u.seiten))f('Seiten muss „links und rechts“ oder „ein Wert“ sein');
+    if(!TEST_GRUPPEN.includes(u.gruppe))f('Gruppe muss eine von '+TEST_GRUPPEN.join(', ')+' sein');
+    if(u.assessment!=null&&typeof u.assessment!=='boolean')f('assessment muss true oder false sein');
+    if(u.beschreibung!=null&&!txt(u.beschreibung))f('Beschreibung muss ein Text sein');
+    if(u.video!=null&&!txt(u.video))f('Video muss ein Text sein');
+    if(name&&obj.tests.slice(0,i).some(v=>v&&txt(v.name)&&testKey(v.name)===testKey(name)))f('Name kommt in der Datei doppelt vor');
+    if(fehler.length>n0)return;
+    const vorh=da.find(t=>testKey(t.n)===testKey(name));
+    if(!vorh)neu.push({n:name,u:u.einheit,g:u.gruppe,single:u.seiten==='ein Wert',a:!!u.assessment});
+    const text=txt(u.beschreibung)?u.beschreibung.trim():'', video=normUrl(u.video);
+    if(text||video)info.push({n:vorh?vorh.n:name,text,video,vorh:!!vorh});
+  });
+  return {fehler,neu,info};
+}
+// Vorschau und Übernahme: neue Tests anlegen; Beschreibung und Video nur dort eintragen, wo noch nichts steht (Vorhandenes bleibt)
+function importTests(obj,fname){
+  const {fehler,neu,info}=pruefeTests(obj);
+  if(fehler.length){
+    openSheet(`<h3>Tests importieren</h3><div class="impbox"><span>Datei: <b>${esc(fname)}</b></span></div>
+      <div class="warn" id="testFehler"><b>Datei nicht übernommen.</b> ${fehler.length} Fehler:<ul style="margin:6px 0 0;padding-left:18px">${fehler.slice(0,12).map(t=>`<li>${esc(t)}</li>`).join('')}${fehler.length>12?`<li>… und ${fehler.length-12} weitere</li>`:''}</ul></div>`);
+    return}
+  const leer=(n,f)=>!testInfoOf(n)[f];
+  const erg=info.filter(o=>(o.text&&leer(o.n,'text'))||(o.video&&leer(o.n,'video')));
+  const bleibt=info.filter(o=>o.vorh&&!erg.includes(o));
+  const nAlt=info.filter(o=>o.vorh).length;
+  openSheet(`<h3>Tests importieren</h3><div class="impbox"><span>Datei: <b>${esc(fname)}</b></span><span><b>${neu.length}</b> neu · <b>${erg.filter(o=>o.vorh).length}</b> vorhandene ergänzt</span></div>
+    ${neu.length?`<div class="list" id="testNeu">${neu.map(t=>`<div class="item"><div class="t"><b>${esc(t.n)}</b><small>${esc(t.u)} · ${t.single?'ein Wert':'links und rechts'} · ${esc(t.g)}${t.a?' · im Assessment':''}${info.some(o=>o.n===t.n&&o.text)?' · mit Beschreibung':''}</small></div></div>`).join('')}</div>`:''}
+    ${erg.some(o=>o.vorh)?`<div class="hint" id="testErg">Beschreibung oder Video ergänzt bei: ${erg.filter(o=>o.vorh).map(o=>esc(o.n)).join(', ')}</div>`:''}
+    ${bleibt.length?`<div class="hint" id="testBleibt">Schon mit Beschreibung, bleibt unverändert: ${bleibt.map(o=>esc(o.n)).join(', ')}</div>`:''}
+    ${neu.length||erg.length?`<div class="hint">Fügt nur hinzu. Messwerte, Plan und alles andere in ${esc(APP_NAME)} bleiben unverändert.</div>
+    <div class="row"><button class="btn primary" style="flex:1" id="testYes">Übernehmen</button></div>`:'<div class="hint" id="testNichts">Nichts Neues in der Datei.</div>'}`);
+  const yes=document.getElementById('testYes'); if(!yes)return;
+  yes.onclick=()=>{
+    S.customTests=Array.isArray(S.customTests)?S.customTests:[];
+    neu.forEach(t=>{S.customTests.push(t);if(S.testAssess)delete S.testAssess[t.n];addEvent(`Test ${t.n}: angelegt (Import)`)});
+    erg.forEach(o=>{if(o.text&&leer(o.n,'text'))setTestInfo(o.n,'text',o.text);if(o.video&&leer(o.n,'video'))setTestInfo(o.n,'video',o.video);if(o.vorh)addEvent(`Test ${o.n}: Beschreibung ergänzt (Import)`)});
+    save(); closeSheet(); render(); toast(neu.length?(neu.length===1?'1 Test hinzugefügt':neu.length+' Tests hinzugefügt'):'Beschreibungen ergänzt')};
+}
 // Import: Datei lesen, prüfen, Vorschau; „Ersetzen“ ist die Entscheidung (ein Dialog)
 function importFile(file){
   const rd=new FileReader();
@@ -2753,6 +2836,8 @@ function importFile(file){
   rd.onload=()=>{let obj=null;try{obj=JSON.parse(rd.result)}catch(e){}
     // Übungsdatei (z. B. vom Übungs-Agenten erstellt): fügt nur Übungen hinzu, in beiden Kanälen erlaubt
     if(obj&&obj.app==='MF-Log'&&obj.art==='uebungen'){importUebungen(obj,file.name);return}
+    // Testdatei (1.0.26): fügt Tests hinzu und ergänzt leere Beschreibungen und Video-Links, ersetzt nichts; in beiden Kanälen erlaubt
+    if(obj&&obj.app==='MF-Log'&&obj.art==='tests'){importTests(obj,file.name);return}
     if(!obj||obj.app!=='MF-Log'||!obj.daten||typeof obj.daten!=='object'){toast('Keine MF-Log-Exportdatei');return}
     const dt=obj.daten, days=Object.values(dt.days||{});
     const nTage=days.filter(d=>d&&(d.tf!=null||(d.done||[]).length||(d.notes||[]).length||(d.tests||[]).length)).length;
