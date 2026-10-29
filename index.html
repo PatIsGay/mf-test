@@ -16,7 +16,7 @@
     --k:#D9EAD3; --k-ink:#2F5A2A; --i:#6AA84F; --i-ink:#FFFFFF; --pause:#C9C9C4; --pause-ink:#444;
     --tennis:#E0644F; --laufen:#F0A23A; --kochen:#4A7BD0; --buero:#7A8BA6; --hbuero:#B4BFCF;
     --g0:#3F9A57; --g1:#8CC15E; --g2:#E4B93B; --g3:#EE8A3A; --g4:#D9483B;
-    --m0:#CFE6D2; --m1:#DDE8BE; --m2:#F3E4AE; --m3:#F5CDA8; --m4:#F0B5AE; --line2:#EDEBE3;
+    --m0:#CFE6D2; --m1:#DDE8BE; --m2:#F3E4AE; --m3:#F5CDA8; --m4:#F0B5AE; --line2:#EDEBE3; --hit:#FFF3C4; --hit-ink:#3A3010;
     --focus:#2F6B3F; --shadow:0 6px 24px rgba(30,42,34,.12);
     color-scheme:light;
   }
@@ -24,13 +24,13 @@
     :root:not([data-theme="light"]){
       --bg:#151A17; --surface:#1F2622; --surface2:#28302B; --line:#37403A; --ink:#EEF1EC; --ink2:#B4BDB6; --ink3:#7E8781;
       --accent:#7FC08F; --accent-ink:#0F1A12; --accent-soft:#25382B;
-      --k:#3A5A35; --k-ink:#D9EAD3; --i:#5E9A45; --pause:#4A4F4B; --pause-ink:#E0E0E0; --shadow:0 6px 24px rgba(0,0,0,.4); color-scheme:dark; --m0:#3E6A48; --m1:#5A6E3A; --m2:#7A6A2A; --m3:#7A4E2A; --m4:#7A3A34; --line2:#2E3631; --syink:#EEF1EC;
+      --k:#3A5A35; --k-ink:#D9EAD3; --i:#5E9A45; --pause:#4A4F4B; --pause-ink:#E0E0E0; --shadow:0 6px 24px rgba(0,0,0,.4); color-scheme:dark; --m0:#3E6A48; --m1:#5A6E3A; --m2:#7A6A2A; --m3:#7A4E2A; --m4:#7A3A34; --line2:#2E3631; --syink:#EEF1EC; --hit:#4A4220; --hit-ink:#F5EBC4;
     }
   }
   :root[data-theme="dark"]{
     --bg:#151A17; --surface:#1F2622; --surface2:#28302B; --line:#37403A; --ink:#EEF1EC; --ink2:#B4BDB6; --ink3:#7E8781;
     --accent:#7FC08F; --accent-ink:#0F1A12; --accent-soft:#25382B;
-    --k:#3A5A35; --k-ink:#D9EAD3; --i:#5E9A45; --pause:#4A4F4B; --pause-ink:#E0E0E0; --shadow:0 6px 24px rgba(0,0,0,.4); color-scheme:dark; --m0:#3E6A48; --m1:#5A6E3A; --m2:#7A6A2A; --m3:#7A4E2A; --m4:#7A3A34; --line2:#2E3631; --syink:#EEF1EC;
+    --k:#3A5A35; --k-ink:#D9EAD3; --i:#5E9A45; --pause:#4A4F4B; --pause-ink:#E0E0E0; --shadow:0 6px 24px rgba(0,0,0,.4); color-scheme:dark; --m0:#3E6A48; --m1:#5A6E3A; --m2:#7A6A2A; --m3:#7A4E2A; --m4:#7A3A34; --line2:#2E3631; --syink:#EEF1EC; --hit:#4A4220; --hit-ink:#F5EBC4;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -468,6 +468,49 @@
   .dayx .hint{font-size:11px}
   .sytile{display:inline-block;min-width:26px;padding:2px 5px;border-radius:6px;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;text-align:center;background:var(--surface);color:var(--ink2)}
   .warn{background:#FBECEA;color:#7A2A22;border-radius:10px;padding:8px 10px;font-size:13px}
+  /* „Später am Tag“ zugeklappt: Uhrzeit je Eintrag (1.0.29) */
+  .abt{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--ink2);min-width:38px}
+  /* Analyse (1.0.29): Filter oben fest im Sheet, darunter die Tage */
+  table.matrix th.anath{vertical-align:middle;text-align:left}
+  .anaf{position:sticky;top:-14px;z-index:2;background:var(--surface);margin:0 -16px;padding:6px 16px 8px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+  .anaf input[type=search]{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--surface);font-size:14px}
+  .anaf .chips{gap:6px}
+  select.anasel{width:auto;max-width:100%;padding:4px 10px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--ink2)}
+  select.anasel.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft)}
+  .anal{display:flex;flex-direction:column}
+  .anad{border-top:1px solid var(--line);padding:12px 0;display:flex;flex-direction:column;gap:7px;min-width:0}
+  .anad:first-child{border-top:0;padding-top:4px}
+  .anah{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;min-height:32px;text-align:left}
+  .anah .dd{font-weight:800;font-size:15px;min-width:76px}
+  .anah .chev{margin-left:auto;color:var(--ink3);font-size:18px;font-weight:700}
+  .anasy{overflow-x:auto}
+  .anasy table{border-collapse:collapse;font-size:12px}
+  .anasy th{font-weight:600;color:var(--ink3);font-size:11px;text-align:center;padding:0 4px 3px;white-space:nowrap;vertical-align:bottom;line-height:1.2}
+  .anasy td{padding:2px 4px;text-align:center}
+  .anasy th:first-child,.anasy td:first-child{text-align:left;padding-left:0}
+  .anasy td:first-child{color:var(--ink2);font-weight:600;white-space:nowrap;padding-right:8px}
+  .anasy tr.hl td:first-child{color:var(--ink);font-weight:800}
+  .anasy .sy{min-width:26px;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;padding:2px 4px;border-radius:6px;display:inline-block;background:var(--surface2);color:var(--ink2)}
+  .anasy .tf{min-width:24px;height:22px;font-size:12px}
+  .anasy .same{opacity:.45}
+  .anasy .up{box-shadow:inset 0 0 0 1.5px var(--ink2)}
+  .anaq{font-size:12px;color:var(--ink3)}
+  .anas{display:flex;flex-direction:column;gap:2px}
+  .anas .sh{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}
+  .anaex{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column}
+  .anaex li{padding:4px 6px;margin:0 -6px;border-radius:8px;display:flex;flex-direction:column;gap:2px}
+  .anaex li.hit{background:var(--accent-soft)}
+  .anaex .en{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:14px}
+  .anaex .en b{font-weight:700}
+  .anaex .pos{font-size:12px;color:var(--ink3);font-weight:600;white-space:nowrap}
+  .anaex li.skip .en b{color:var(--ink3);text-decoration:line-through}
+  .badge.neu{background:var(--accent-soft);color:var(--accent)}
+  .badge.prob{background:var(--g4);color:#fff}
+  .ananote{display:block;font-size:13px;color:var(--ink2);padding-left:9px;border-left:2px solid var(--line);margin-left:2px;overflow-wrap:anywhere}
+  .anaj{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)}
+  .anaj div{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;min-width:0;overflow-wrap:anywhere}
+  mark.anam{background:var(--hit);color:var(--hit-ink);border-radius:3px;padding:0 1px}
+  .anaempty{padding:20px 0;text-align:center;color:var(--ink2);font-size:14px;display:flex;flex-direction:column;gap:8px;align-items:center}
   :root[data-theme="dark"] .warn{background:#3A2320;color:#F2C9C3}
   @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .warn{background:#3A2320;color:#F2C9C3}}
   /* unsichtbar vergrößerte Trefferflächen, sichtbare Größe bleibt */
@@ -559,7 +602,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.28';
+const APP_VERSION='1.0.29';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -754,14 +797,18 @@ function seedDays(){
     const sy = t==null?{}:{s1:Math.max(0,t-2),s2:Math.max(0,t-3),s3:Math.max(0,t-2+(idx%3===0?1:0)),s4:Math.max(0,t-4),s5:Math.max(0,t-3)};
     // Abendwerte an vier Tagen: idx 17 deutlich höher, idx 21 und 25 wie morgens, idx 23 ein Symptom +1
     // „später am Tag“ an den meisten Trainingstagen der letzten zwei Wochen; ein deutlicher Ausreißer am Tag 17
-    const later=t!=null&&i>0&&(idx===17||(idx>=13&&done.some(a=>['K','I'].includes(a.type))&&idx%5!==4));
-    const syA = idx===17?Object.assign({},sy,{s1:sy.s1+3,s4:sy.s4+2}):later?Object.assign({},sy,idx%3===2?{s3:sy.s3+1}:idx%4===1?{s1:sy.s1+1}:{}):{};
-    days[k]={tf:t,tfA:(idx===17?8:null),sleep:sl[idx],sq:(sl[idx]==null?null:sl[idx]>=7?'gut':sl[idx]>=6?'mittel':'schlecht'),sy,syA,extra:[],chips,note:(idx===17?'unruhig geschlafen':''),planned,done,abw,notes:[],tests:[]};
-    if(Object.keys(syA).length)days[k].eveningDone=true;
+    const lat=t!=null&&i>0&&(idx===17||(idx>=13&&done.some(a=>['K','I'].includes(a.type))&&idx%5!==4));
+    const syA = idx===17?Object.assign({},sy,{s1:sy.s1+3,s4:sy.s4+2}):lat?Object.assign({},sy,idx%3===2?{s3:sy.s3+1}:idx%4===1?{s1:sy.s1+1}:{}):{};
+    // 1.0.29: „Später am Tag“ als Eintrag um 20 Uhr (Tag 17 mit Tagesform 8)
+    const t20=new Date(d);t20.setHours(20,0,0,0);
+    const later=Object.keys(syA).length?[{t:t20.getTime(),tf:idx===17?8:null,sy:syA}]:[];
+    days[k]={tf:t,sleep:sl[idx],sq:(sl[idx]==null?null:sl[idx]>=7?'gut':sl[idx]>=6?'mittel':'schlecht'),sy,later,extra:[],chips,note:(idx===17?'unruhig geschlafen':''),planned,done,abw,notes:[],tests:[]};
   }
   // Assessment vor 10 Tagen mit drei Tests, damit die Tests-Tabelle eine gemessene Spalte zeigt
   days[iso(addD(today,-10))].tests=[{n:'Gestrecktes Beinheben (SLR)',l:65,r:70},{n:'Hüftaußenrotation',l:40,r:45},{n:'Kniebeuge',l:'5 cm',r:'–'}];
-  const tk=iso(today); days[tk].planned=[...(P().raster[wd(today)]||[])]; days[tk].done=[]; days[tk].abw=[]; days[tk].chips=[]; days[tk].sy={}; days[tk].syA={}; days[tk].extra=[];
+  const tk=iso(today); days[tk].planned=[...(P().raster[wd(today)]||[])]; days[tk].done=[]; days[tk].abw=[]; days[tk].chips=[]; days[tk].sy={}; days[tk].later=[]; days[tk].extra=[];
+  // zwei Einträge „Später am Tag“ am jüngsten Tag mit Eintrag: 11:30 wie morgens, dann der Eintrag um 20 Uhr
+  for(let i=1;i<=27;i++){const day=days[iso(addD(today,-i))];if(!day||!day.later.length)continue;const t1=addD(today,-i);t1.setHours(11,30,0,0);day.later.unshift({t:t1.getTime(),tf:null,sy:Object.assign({},day.sy)});break}
   seedEx(days);
   // Kniestand (Testphase) außerplanmäßig in zwei vergangenen LWS-/Hüfte-Einheiten mit Folgetagswerten
   const e4r=[1,1];
@@ -845,7 +892,12 @@ function hydrate(obj){
      da.add(testKey(t.n));if(typeof t.u!=='string')t.u='';if(!TEST_GRUPPEN.includes(t.g))t.g='Eigene';t.single=!!t.single;t.a=!!t.a;return true})}
   // leere Symptomliste ist erlaubt (alle gelöscht); nur ein fehlender Eintrag wird neu belegt
   if(!Array.isArray(S.symptoms))S.symptoms=SYM_SEED.map(s=>Object.assign({},s));
-  Object.values(S.days).forEach(dd=>{if(!dd.sy||Array.isArray(dd.sy))dd.sy={};if(!dd.syA||Array.isArray(dd.syA))dd.syA={};if(!Array.isArray(dd.extra))dd.extra=[];['done','abw','notes','tests','chips','planned'].forEach(f=>{if(!Array.isArray(dd[f]))dd[f]=[]});dd.done.forEach(a=>(a.ex||[]).forEach(migR))});
+  Object.values(S.days).forEach(dd=>{if(!dd.sy||Array.isArray(dd.sy))dd.sy={};
+    // 1.0.29: „Später am Tag“ als Liste; ältere Stände (tfA, syA) werden ein Eintrag ohne Uhrzeit (keine Abwärtskompatibilität nötig, Entscheidung 11.10.2026)
+    if(!Array.isArray(dd.later)){dd.later=[];const sa=dd.syA&&typeof dd.syA==='object'&&!Array.isArray(dd.syA)?dd.syA:{};if(Object.keys(sa).length||typeof dd.tfA==='number')dd.later.push({t:null,tf:typeof dd.tfA==='number'?dd.tfA:null,sy:Object.assign({},sa)})}
+    dd.later=dd.later.filter(e=>e&&typeof e==='object').map(e=>({t:typeof e.t==='number'?e.t:null,tf:typeof e.tf==='number'?e.tf:null,sy:e.sy&&typeof e.sy==='object'&&!Array.isArray(e.sy)?e.sy:{}})).sort((a,b)=>(a.t??0)-(b.t??0));
+    delete dd.tfA;delete dd.syA;delete dd.eveningDone;if(dd.laterDraft!=null&&(typeof dd.laterDraft!=='object'||Array.isArray(dd.laterDraft)))delete dd.laterDraft;
+    if(!Array.isArray(dd.extra))dd.extra=[];['done','abw','notes','tests','chips','planned'].forEach(f=>{if(!Array.isArray(dd[f]))dd[f]=[]});dd.done.forEach(a=>(a.ex||[]).forEach(migR))});
   if(S.session&&Array.isArray(S.session.items))S.session.items.forEach(migR); if(S.session&&S.sessShow==null)S.sessShow=S.tab==='training';
   // gelöschte Beispielübungen (Testkanal), eigene Übungen, Bearbeitungen, Cues, Dosis, Prinzip-Cues
   const del=Array.isArray(S.exDeleted)?S.exDeleted:[]; for(let i=EX.length-1;i>=0;i--)if(del.includes(EX[i].id))EX.splice(i,1);
@@ -882,6 +934,12 @@ function fixKalRows(){const r=S.kalRows&&typeof S.kalRows==='object'?S.kalRows:{
 let saveFehler=false;
 function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(S));saveFehler=false}catch(e){if(!saveFehler){saveFehler=true;setTimeout(()=>toast('Speichern fehlgeschlagen. Bitte unter Mehr exportieren.'),0)}}}
 const D = ()=>S.days[iso(today)];
+// „Später am Tag“ (1.0.29, Wunsch 11.10.2026): je Tag mehrere Einträge mit Uhrzeit, x.later=[{t,tf,sy}] (t = Zeitpunkt des Speicherns, ältere ohne: null).
+// Kalender und Tagesdetail zeigen den letzten Eintrag (Entscheidung 11.10.2026: der letzte, nicht der höchste); Tagesform = letzte gesetzte.
+const laterOf=x=>(x&&Array.isArray(x.later))?x.later:[];
+const laterLast=x=>{const l=laterOf(x);return l.length?l[l.length-1]:null};
+const laterTf=x=>{const l=laterOf(x);for(let i=l.length-1;i>=0;i--)if(l[i].tf!=null)return l[i].tf;return null};
+const laterZeit=e=>e&&e.t?hhmm(e.t):'–';
 const Y = ()=>ensureDay(iso(addD(today,-1)));
 const exById = id => EX.find(e=>e.id===id);
 const exStatus = e => S.exStatus[e.id]||e.status;
@@ -929,9 +987,9 @@ sheet.addEventListener('touchmove',ev=>{if(!shDrag)return;const t=ev.touches[0];
 // Klick direkt nach dem Ziehen nicht auslösen
 sheet.addEventListener('click',ev=>{if(sheet._sup&&Date.now()-sheet._sup<300){ev.stopPropagation();ev.preventDefault()}},true);
 // Untersheet aus einem Bibliothek-Sheet (Plan, Tests): Abbruch über den Hintergrund führt dorthin zurück statt in die Bibliothek
-function backOrClose(){const b=sheet.dataset.back;if(b){delete sheet.dataset.back;openBibSheet(b,true)}else closeSheet()}
+function backOrClose(){const b=sheet.dataset.back;if(b){delete sheet.dataset.back;if(b==='ana')anaSheet(ANA.end,true);else openBibSheet(b,true)}else closeSheet()}
 function confirmSheet(msg,onYes,yesLabel,body){openSheet(`<h3>${msg}</h3>${body||''}<div class="row"><button class="btn primary" id="cy">${yesLabel||'Ja'}</button><button class="btn ghost" id="cn">Abbrechen</button></div>`);document.getElementById('cy').onclick=()=>{closeSheet();onYes()};document.getElementById('cn').onclick=backOrClose}
-function ensureDay(k){if(!S.days[k]){const d=new Date(k+'T12:00:00');S.days[k]={tf:null,tfA:null,sleep:null,sq:null,sy:{},syA:{},extra:[],chips:[],note:'',planned:stripKochen(P().raster[wd(d)]),done:[],abw:[],notes:[],tests:[]}}return S.days[k]}
+function ensureDay(k){if(!S.days[k]){const d=new Date(k+'T12:00:00');S.days[k]={tf:null,sleep:null,sq:null,sy:{},later:[],extra:[],chips:[],note:'',planned:stripKochen(P().raster[wd(d)]),done:[],abw:[],notes:[],tests:[]}}return S.days[k]}
 // Konzept-Hinweise hinter „?“ (Zustand nur für diese Sitzung)
 const QH={};
 const qBtn=id=>`<button class="qbtn" data-qh="${id}" aria-expanded="${!!QH[id]}" aria-label="Erklärung ${QH[id]?'ausblenden':'einblenden'}">?</button>`;
@@ -1004,28 +1062,41 @@ function rHeute(){
         <div class="stack" style="margin-top:8px">${symRows(d).map(s=>`<div class="symrow"><div class="lbl">${esc(symName(s))}</div><div class="scale" data-sy="${s.id}">${[...Array(11).keys()].map(v=>`<button class="${syVal(d,s.id)===v?'on '+(v===0?'c0':clsSy(v)):''}" data-v="${v}">${v}</button>`).join('')}</div></div>`).join('')||'<div class="hint">Noch kein Symptom. Deine festen Symptome legst du unter „verwalten“ an.</div>'}</div>
         <div class="chips" style="margin-top:8px"><button class="chip sm" id="symMore">+ weiteres Symptom heute</button></div>
         <div class="hint" style="margin-top:6px">0 kein Schmerz · 3 tolerierbar · 5 sehr beunruhigend · 7 sehr intensiv · 10 unvorstellbar</div></div>
-      ${y.eveningDone?'':`<div class="row between"><div class="lbl">Gestern</div><div class="chips">${CHIPS.map(c=>`<button class="chip sm ${y.chips.includes(c)?'on':''}" data-ychip="${c}">${c}</button>`).join('')}</div></div>
+      ${laterOf(y).length?'':`<div class="row between"><div class="lbl">Gestern</div><div class="chips">${CHIPS.map(c=>`<button class="chip sm ${y.chips.includes(c)?'on':''}" data-ychip="${c}">${c}</button>`).join('')}</div></div>
       <div class="hint" style="margin-top:-4px">Stress und Sitzen gelten für den Vortag. Für heute in „Später am Tag“.</div>`}
       <button class="btn primary wide" id="saveCheck">Speichern</button>
     </div>
   </section>`;
-  // „Später am Tag“ offen ab 17 Uhr, mit eigenem Wert oder sobald heute eine Einheit fertig ist
-  const abendFull=hour>=17||d.tfA!=null||d.done.some(a=>a.ex&&!a.open)||S.laterOpen===iso(today)||!!d.eveningDone;
-  // Symptome später am Tag: solange kein eigener Wert gesetzt ist, steht der Morgenwert blass (ghost) vorgewählt
-  const syA=d.syA||{}; const scA=symScore(syA); const scAC=scA==null?'':clsSy(Math.round(scA));
-  const symAbend=symRows(d).map(s=>{const a=syA[s.id],m=syVal(d,s.id),cur=a!=null?a:m,gh=a==null&&m!=null;return `<div class="symrow"><div class="lbl">${esc(symName(s))}</div><div class="scale" data-sya="${s.id}">${[...Array(11).keys()].map(v=>`<button class="${cur===v?'on '+(v===0?'c0':clsSy(v))+(gh?' ghost':''):''}" data-v="${v}">${v}</button>`).join('')}</div></div>`}).join('');
-  // nach dem Speichern eingeklappt wie der Check-in; „ändern“ setzt S.laterOpen
-  const abendDone=abendFull&&!!d.eveningDone&&S.laterOpen!==iso(today);
-  const abendHtml=abendDone?`<section class="card" id="abendCard"><h2>Später am Tag <span class="badge">erfasst</span></h2>
-    <div class="row between" id="abRow" style="cursor:pointer;flex-wrap:nowrap"><div class="row" style="gap:6px"><span class="hint">Form</span><span class="tf ${cls(d.tfA)}">${d.tfA??'–'}</span><span class="hint">Sympt.</span><span class="sy sytile ${scAC}"${scAC?'':' style="background:var(--surface2)"'}>${fmtN(scA)}</span>${d.chips.length||tagLbl.length?`<span style="font-size:13px;font-weight:600">${[d.chips.map(esc).join(', '),tagLbl.join(', ')].filter(Boolean).join(' · ')}</span>`:''}</div><button class="tog" id="abEdit" style="font-size:13px">ändern</button></div></section>`
-  :abendFull?`<section class="card" id="abendCard"><h2>Später am Tag <span class="badge">optional</span></h2><div class="row between"><div class="lbl">Tagesform jetzt</div><span class="tf ${cls(d.tfA)}">${d.tfA==null?'–':d.tfA}</span></div><div style="margin-top:8px">${scale(d.tfA).replace('class="scale"','class="scale" id="abend"')}</div>
+  // „Später am Tag“ (1.0.29): mehrere Einträge mit Uhrzeit (d.later). Bearbeitet wird ein Entwurf d.laterDraft={i,tf,sy} (i = Index eines
+  // vorhandenen Eintrags, null = neuer Eintrag); „Speichern“ übernimmt ihn mit der Uhrzeit des Speicherns. Offen ab 17 Uhr, mit Entwurf oder sobald
+  // heute eine Einheit fertig ist; gibt es Einträge, zeigt die Karte sie zugeklappt, bis „ändern“ oder „+ nochmal erfassen“ (S.laterOpen = Datum).
+  const L=laterOf(d); const abEdit=S.laterOpen===iso(today);
+  const dr=d.laterDraft&&typeof d.laterDraft==='object'?d.laterDraft:null;
+  const abendFull=abEdit||(!L.length&&(hour>=17||!!dr||d.done.some(a=>a.ex&&!a.open)));
+  const cur=dr||{i:null,tf:null,sy:{}}; const curSy=cur.sy||{};
+  const editI=cur.i!=null&&L[cur.i]?cur.i:null;
+  // Vorbelegung (blass): neuer Eintrag = letzter Eintrag des Tages, sonst die Morgenwerte; beim Ändern stehen die Werte des Eintrags im Entwurf
+  const abBase=id=>editI!=null?undefined:(L.length?L[L.length-1].sy[id]:syVal(d,id));
+  const syNow=Object.assign({},...symRows(d).map(s=>{const v=curSy[s.id]??abBase(s.id);return v==null?{}:{[s.id]:v}}));
+  // „Score jetzt“ erst, wenn im Entwurf etwas gesetzt ist (wie bisher); berechnet mit den Vorbelegungen, so wie „Speichern“ sie übernimmt
+  const scA=editI!=null||Object.keys(curSy).length?symScore(syNow):null;
+  const symAbend=symRows(d).map(s=>{const a=curSy[s.id],m=abBase(s.id),v=a!=null?a:m,gh=a==null&&m!=null;return `<div class="symrow"><div class="lbl">${esc(symName(s))}</div><div class="scale" data-sya="${s.id}">${[...Array(11).keys()].map(n=>`<button class="${v===n?'on '+(n===0?'c0':clsSy(n))+(gh?' ghost':''):''}" data-v="${n}">${n}</button>`).join('')}</div></div>`}).join('');
+  const syTileA=v=>{const c=v==null?'':clsSy(Math.round(v));return `<span class="sy sytile ${c}"${c?'':' style="background:var(--surface2)"'}>${fmtN(v)}</span>`};
+  const tagTxt=[d.chips.map(esc).join(', '),tagLbl.join(', ')].filter(Boolean).join(' · ');
+  const abTitle=editI!=null?`<span class="badge">Eintrag ${laterZeit(L[editI])}</span>`:L.length?'<span class="badge">neuer Eintrag</span>':'<span class="badge">optional</span>';
+  const abendHtml=L.length&&!abEdit?`<section class="card" id="abendCard"><h2>Später am Tag <span class="badge">erfasst</span></h2>
+    <div class="stack" style="gap:6px">${L.map((e,i)=>`<div class="row between abrow"${i===L.length-1?' id="abRow"':''} data-li="${i}" style="cursor:pointer;flex-wrap:nowrap"><div class="row" style="gap:6px"><span class="abt">${laterZeit(e)}</span><span class="hint">Form</span><span class="tf ${cls(e.tf)}">${e.tf??'–'}</span><span class="hint">Sympt.</span>${syTileA(symScore(e.sy))}</div><button class="tog"${i===L.length-1?' id="abEdit"':''} style="font-size:13px">ändern</button></div>`).join('')}</div>
+    ${tagTxt?`<div class="hint" id="abTag" style="margin-top:6px">Heute: ${tagTxt}</div>`:''}
+    <button class="tog" id="abNew" style="margin-top:8px;font-size:13px">+ nochmal erfassen</button></section>`
+  :abendFull?`<section class="card" id="abendCard"><h2>Später am Tag ${abTitle}</h2><div class="row between"><div class="lbl">Tagesform jetzt</div><span class="tf ${cls(cur.tf)}">${cur.tf==null?'–':cur.tf}</span></div><div style="margin-top:8px">${scale(cur.tf).replace('class="scale"','class="scale" id="abend"')}</div>
     <div style="margin-top:10px"><div class="row between"><div class="lbl">Symptome jetzt</div><button class="chip sm" id="wieMorgen">wie heute Morgen</button></div>
       <div class="stack" style="margin-top:8px">${symAbend||'<div class="hint">Kein aktives Symptom.</div>'}</div>
-      ${scA!=null?`<div class="row" style="margin-top:8px;gap:6px"><span class="hint">Score jetzt</span><span class="sy sytile ${scAC}"${scAC?'':' style="background:var(--surface2)"'}>${fmtN(scA)}</span></div>`:''}</div>
+      ${scA!=null?`<div class="row" style="margin-top:8px;gap:6px"><span class="hint">Score jetzt</span>${syTileA(scA)}</div>`:''}</div>
     <div class="row between" style="margin-top:10px"><div class="lbl">Heute</div><div class="chips">${CHIPS.map(c=>`<button class="chip sm ${d.chips.includes(c)?'on':''}" data-chip="${c}">${c}</button>`).join('')}</div></div>
     <div class="row between" style="margin-top:8px;align-items:flex-start"><div class="lbl" style="padding-top:5px">Tag</div><div class="chips" id="tagChips" style="justify-content:flex-end">${tagVis.map(t=>`<button class="chip sm ${tagOn(t)?'on':''}" data-tag="${t}" aria-pressed="${tagOn(t)}">${TYPES[t].l}</button>`).join('')}${tagVis.length<TAG_AKT.length?'<button class="chip sm" id="tagMore">weitere ▸</button>':''}</div></div>
-    <div class="hint" style="margin-top:6px">Eigener Wert für später am Tag, der Morgen bleibt der Kalenderwert. Stress und Sitzen für heute.</div>
-    <button class="btn primary wide" style="margin-top:10px" id="saveAbend">Speichern</button></section>`:`<section class="card" id="abendCard"><div class="row between"><h2 style="margin:0">Später am Tag <span class="badge">optional</span></h2><button class="tog" id="abendNow" style="font-size:13px">jetzt zeigen</button></div></section>`;
+    <div class="hint" style="margin-top:6px">${L.length&&editI==null?'Neuer Eintrag, vorbelegt mit dem letzten. ':''}Eigener Wert für später am Tag, der Morgen bleibt der Kalenderwert. Stress und Sitzen für heute.</div>
+    <button class="btn primary wide" style="margin-top:10px" id="saveAbend">Speichern</button>
+    ${L.length?`<div class="row between" style="margin-top:8px">${editI!=null?'<button class="tog" id="abDel" style="font-size:13px">Eintrag löschen</button>':'<span></span>'}<button class="tog" id="abCancel" style="font-size:13px">abbrechen</button></div>`:''}</section>`:`<section class="card" id="abendCard"><div class="row between"><h2 style="margin:0">Später am Tag <span class="badge">optional</span></h2><button class="tog" id="abendNow" style="font-size:13px">jetzt zeigen</button></div></section>`;
   // echter Kanal beim Start: Hinweis, wo Plan und Übungen angelegt werden (verschwindet mit dem ersten Block)
   const startHtml=P().blocks.length?'':`<section class="card" id="startHint"><div class="hint">Noch kein Plan. Blöcke legst du unter Bibliothek → Plan an.${EX.length?'':' Übungen legst du in der Bibliothek mit „+ Neue Übung“ an.'}</div><button class="tog" id="toPlan" style="margin-top:8px;font-size:13px">Zum Plan ›</button></section>`;
   // Backup-Hinweis: ein Tipp exportiert direkt
@@ -1060,14 +1131,25 @@ function rHeute(){
     document.getElementById('saveCheck').onclick=()=>{if(d.tf==null){toast('Tagesform fehlt noch');return}if(d.sleep==null)d.sleep=slShow;if(d.sq==null)d.sq=sqShow;d.checkedIn=true;S.checkinOpen=false;render();toast('Check-in gespeichert');window.scrollTo({top:0,behavior:'smooth'})};
   }
   document.querySelectorAll('[data-chip]').forEach(b=>b.onclick=()=>{const c=b.dataset.chip;d.chips=d.chips.includes(c)?d.chips.filter(x=>x!==c):[...d.chips,c];render()});
-  const ab=document.getElementById('abend'); if(ab)ab.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;d.tfA=+b.dataset.v;render()});
+  // „Später am Tag“: Entwurf anlegen (neu oder Kopie eines Eintrags), Tipps schreiben in den Entwurf
+  const abDraft=()=>{if(!d.laterDraft||typeof d.laterDraft!=='object')d.laterDraft={i:null,tf:null,sy:{}};if(!d.laterDraft.sy)d.laterDraft.sy={};return d.laterDraft};
+  const ab=document.getElementById('abend'); if(ab)ab.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;abDraft().tf=+b.dataset.v;render()});
   const an=document.getElementById('abendNow'); if(an)an.onclick=()=>{S.laterOpen=iso(today);render();const ac=document.getElementById('abendCard');if(ac)ac.scrollIntoView({block:'nearest'})};
-  document.querySelectorAll('[data-sya]').forEach(sc=>sc.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(!d.syA)d.syA={};d.syA[sc.dataset.sya]=+b.dataset.v;render()}));
-  const wm=document.getElementById('wieMorgen'); if(wm)wm.onclick=()=>{if(!d.syA)d.syA={};symRows(d).forEach(s=>{const v=syVal(d,s.id);if(v!=null)d.syA[s.id]=v});toast('Symptome wie heute Morgen');render()};
-  const sa=document.getElementById('saveAbend'); if(sa)sa.onclick=()=>{if(!d.syA)d.syA={};symRows(d).forEach(s=>{const v=syVal(d,s.id);if(d.syA[s.id]==null&&v!=null)d.syA[s.id]=v});d.eveningDone=true;S.laterOpen=false;save();render();toast('Später am Tag gespeichert');
-    // die Seite wird kürzer; die zugeklappte Zeile soll im Bild bleiben (unter der festen Kopfzeile)
-    const ac=document.getElementById('abendCard');if(ac){const r=ac.getBoundingClientRect(),h=document.querySelector('.top').offsetHeight;if(r.top<h||r.bottom>innerHeight)window.scrollTo({top:Math.max(0,scrollY+r.top-h-8),behavior:'smooth'})}};
-  const abr=document.getElementById('abRow'); if(abr)abr.onclick=()=>{S.laterOpen=iso(today);render()};
+  document.querySelectorAll('[data-sya]').forEach(sc=>sc.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;abDraft().sy[sc.dataset.sya]=+b.dataset.v;render()}));
+  const wm=document.getElementById('wieMorgen'); if(wm)wm.onclick=()=>{const c=abDraft();symRows(d).forEach(s=>{const v=syVal(d,s.id);if(v!=null)c.sy[s.id]=v});toast('Symptome wie heute Morgen');render()};
+  const abZeigen=()=>{const ac=document.getElementById('abendCard');if(ac){const r=ac.getBoundingClientRect(),h=document.querySelector('.top').offsetHeight;if(r.top<h||r.bottom>innerHeight)window.scrollTo({top:Math.max(0,scrollY+r.top-h-8),behavior:'smooth'})}};
+  const sa=document.getElementById('saveAbend'); if(sa)sa.onclick=()=>{const c=abDraft();const sy=Object.assign({},c.sy);
+    symRows(d).forEach(s=>{if(sy[s.id]==null){const v=abBase(s.id);if(v!=null)sy[s.id]=v}});
+    if(!Array.isArray(d.later))d.later=[];
+    if(editI!=null){d.later[editI].tf=c.tf;d.later[editI].sy=sy}else d.later.push({t:Date.now(),tf:c.tf,sy});
+    delete d.laterDraft;S.laterOpen=false;save();render();toast('Später am Tag gespeichert');
+    // die Seite wird kürzer; die zugeklappte Karte soll im Bild bleiben (unter der festen Kopfzeile)
+    abZeigen()};
+  // zugeklappt: Tipp auf eine Zeile ändert diesen Eintrag; „+ nochmal erfassen“ beginnt einen neuen (vorbelegt mit dem letzten)
+  document.querySelectorAll('#abendCard [data-li]').forEach(r=>r.onclick=()=>{const i=+r.dataset.li,e=L[i];if(!e)return;d.laterDraft={i,tf:e.tf,sy:Object.assign({},e.sy)};S.laterOpen=iso(today);render()});
+  const abn=document.getElementById('abNew'); if(abn)abn.onclick=()=>{d.laterDraft={i:null,tf:null,sy:{}};S.laterOpen=iso(today);render()};
+  const abc=document.getElementById('abCancel'); if(abc)abc.onclick=()=>{delete d.laterDraft;S.laterOpen=false;render();abZeigen()};
+  const abd=document.getElementById('abDel'); if(abd)abd.onclick=()=>{const i=editI;const e=L[i];if(!e)return;confirmSheet(`Eintrag von ${laterZeit(e)} löschen?`,()=>{d.later.splice(i,1);delete d.laterDraft;S.laterOpen=false;save();render();toast('Eintrag gelöscht')},'Löschen')};
   document.querySelectorAll('[data-ycont]').forEach(b=>b.onclick=()=>{startSession(b.dataset.ycont,iso(addD(today,-1)));setTab('training')});
   // Tag-Chips: Tipp schaltet für heute ein oder aus; Bürotag und halber Bürotag schließen sich aus
   document.querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{const t=b.dataset.tag;const on=tagOn(t);
@@ -2089,7 +2171,7 @@ function symScore(sy){const src=sy||{};const v=symList().map(s=>src[s.id]).filte
 const fmtN=n=>n==null?'–':(Math.round(n*10)/10).toLocaleString('de-DE');
 // künftige Tage: Wert aus dem Raster, außer der Tag wurde einzeln geplant (plannedManual)
 function stripKochen(pl){return (pl||[]).filter(t=>t!=='Kochen')}
-function dayOf(d){const k=iso(d);const x=S.days[k];if(x){if(k<=iso(today))return x;return Object.assign({},x,{planned:x.plannedManual?x.planned:stripKochen(P().raster[wd(d)]),future:true})}return {tf:null,tfA:null,sleep:null,sq:null,sy:{},syA:{},extra:[],chips:[],note:'',planned:stripKochen(P().raster[wd(d)]),done:[],abw:[],notes:[],tests:[],future:true}}
+function dayOf(d){const k=iso(d);const x=S.days[k];if(x){if(k<=iso(today))return x;return Object.assign({},x,{planned:x.plannedManual?x.planned:stripKochen(P().raster[wd(d)]),future:true})}return {tf:null,sleep:null,sq:null,sy:{},later:[],extra:[],chips:[],note:'',planned:stripKochen(P().raster[wd(d)]),done:[],abw:[],notes:[],tests:[],future:true}}
 function stats(days){
   const w=days.map(d=>dayOf(d)).filter(x=>!x.future);
   const vals=a=>a.filter(x=>x!=null); const avg=a=>{const v=vals(a);return v.length?v.reduce((p,c)=>p+c,0)/v.length:null};
@@ -2122,7 +2204,7 @@ function rKal(){
   const rowsDef=[
     ['plan','Geplant',x=>sw(x.planned,true),'plan'],
     ['done','Ausgeführt',(x,k)=>x.future?'':sw(x.done,false,k)],
-    ['tf','Tagesform',x=>x.future?'':`<span class="sy ${cls(x.tf)}">${x.tf??'·'}</span>${x.tfA!=null&&!M?`<span class="sy ${cls(x.tfA)}" style="opacity:.6;margin-left:2px">${x.tfA}</span>`:''}`],
+    ['tf','Tagesform',x=>x.future?'':`<span class="sy ${cls(x.tf)}">${x.tf??'·'}</span>${laterTf(x)!=null&&!M?`<span class="sy ${cls(laterTf(x))}" style="opacity:.6;margin-left:2px">${laterTf(x)}</span>`:''}`],
     // eingeklappt: Kurve statt Zahlen (fünfter Eintrag = eine Zelle über alle Tage, gezeichnet von drawSparks)
     ['sym',`<button class="tog" data-tog="sym">Symptome ${S.symOpen?'▾':'▸'}</button>`,x=>x.future?'':syCell(symScore(x.sy)),undefined,!S.symOpen],
     ...(S.symOpen?syms.map(s=>['sym',`<span class="sub">${esc(symLabel(s,syms))}</span>`,x=>{const v=syVal(x,s.id);return x.future||v==null||v===0?'<span class="hint">·</span>':`<span class="sy ${clsSy(v)}">${v}</span>`}]):[]),
@@ -2183,11 +2265,12 @@ function rKal(){
   const leg=[PD&&'<span><i style="background:var(--k)"></i>Korrektiv</span><span><i style="background:var(--i)"></i>Intensiv</span><span><i style="background:var(--tennis)"></i>Tennis</span><span><i style="background:var(--laufen)"></i>Laufen</span><span><i style="background:var(--pause)"></i>Pause</span>',R.buero&&'<span><i style="background:var(--buero)"></i>Büro</span><span><i style="background:var(--hbuero)"></i>halber Büro</span>',R.kochen&&'<span><i style="background:var(--kochen)"></i>Kochen</span>',PD&&'<span><i class="sw K part"></i>unvollständig</span><span><i style="background:var(--accent);height:3px;width:12px;border-radius:0"></i>Plan geändert</span>',R.done&&'<span><i class="sw K xtra"></i>außerplanmäßig</span>',R.sym&&!S.symOpen&&'<span><svg width="16" height="8" aria-hidden="true" style="display:block"><line x1="0" x2="16" y1="4" y2="4" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 3"/></svg>später am Tag</span>'].filter(Boolean).join('');
   main.innerHTML=`<div class="row between"><div class="row" style="gap:8px"><div class="seg"><button data-v="woche" class="${!M?'on':''}">Woche</button><button data-v="monat" class="${M?'on':''}">Monat</button></div>${rowsTog}</div><div class="row" style="gap:6px;margin-left:auto"><button class="chip sm" id="prev">‹</button><span class="hint">${range}</span><button class="chip sm" id="next">›</button></div></div>
   ${S.kalRowsOpen?`<div class="chips" id="rowChips"><button class="chip sm ${nVis===KROWS.length?'on':''}" data-row="*">Alle</button>${KROWS.map(([k,l])=>`<button class="chip sm ${R[k]?'on':''}" data-row="${k}">${l}</button>`).join('')}</div>`:''}
-  <div class="matrix-wrap"><table class="matrix kalm ${M?'month':''}"><thead><tr><th></th>${th}</tr></thead><tbody>${body}</tbody></table></div>
+  <div class="matrix-wrap"><table class="matrix kalm ${M?'month':''}"><thead><tr><th class="anath"><button class="tog" id="anaOpen">Analyse ›</button></th>${th}</tr></thead><tbody>${body}</tbody></table></div>
   ${leg?`<div class="legend">${leg}</div>`:''}
   ${sum}<div class="hint">Tipp auf eine Zelle öffnet den Tag. Tipp auf Geplant an einem künftigen Tag plant diesen Tag einzeln, z. B. Tennis.${symHint} Zukunft zeigt nur Geplant. Akzentlinie am Datum = neue Plan-Version ab diesem Tag.${M?' Kräftige Linien = Wochenanfang. <span class="land-hint">Querformat: Zahlen und alle Tageslinien.</span>':''} „Zeilen“ blendet Zeilen aus, auch in der Wochenkarte.</div>`;
   kalFit(); drawSparks(days);
   document.getElementById('rowsTog').onclick=()=>{S.kalRowsOpen=!S.kalRowsOpen;render()};
+  document.getElementById('anaOpen').onclick=()=>anaSheet(null);
   document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>{const k=b.dataset.row;
     if(k==='*'){KROWS.forEach(([x])=>R[x]=true)}
     else if(R[k]&&nVis===1){toast('Eine Zeile bleibt');return}
@@ -2225,8 +2308,8 @@ function drawSparks(days){
   const cols=ths.length===n?ths.map(th=>{const r=th.getBoundingClientRect();return {l:r.left-x0,c:(r.left+th.clientLeft+r.right)/2-x0,r:r.right-x0}}):days.map((d,i)=>({l:i*cw,c:(i+0.5)*cw,r:(i+1)*cw}));
   const x=i=>cols[i].c, y=v=>pad+(H-2*pad)*(1-v/10);
   const vals=days.map(d=>{const o=dayOf(d);return o.future?null:symScore(o.sy)});
-  // zweite Serie „später am Tag“ (syA, heute nur über die Karte „Später am Tag“): dünn, grau, gestrichelt, unter der Morgenkurve
-  const valsA=days.map(d=>{const o=dayOf(d);return o.future?null:symScore(o.syA)});
+  // zweite Serie „später am Tag“ (letzter Eintrag des Tages, 1.0.29): dünn, grau, gestrichelt, unter der Morgenkurve
+  const valsA=days.map(d=>{const o=dayOf(d);const e=laterLast(o);return o.future||!e?null:symScore(e.sy)});
   const COL={c0:'var(--g0)',c2:'var(--g2)',c3:'var(--g3)',c4:'var(--g4)'};
   const f1=v=>v.toFixed(1);
   const rect=(i,fill)=>`<rect x="${f1(cols[i].l)}" y="0" width="${f1(cols[i].r-cols[i].l)}" height="${H}" fill="${fill}"/>`;
@@ -2253,7 +2336,9 @@ function daySheet(k){
   const tfTile=v=>`<span class="tf ${cls(v)}">${v??'–'}</span>`;
   const syTile=v=>v==null?'<span class="sy sytile">–</span>':`<span class="sy sytile ${clsSy(Math.round(v))}">${fmtN(v)}</span>`;
   const nx=dayOf(addD(d,1)); const nxSc=symScore(nx.sy); const nxLeer=nextFut||(nx.tf==null&&nxSc==null);
-  const scA=symScore(x.syA); const abRows=symRows(x); const abSyms=abRows.map(s=>({s,v:(x.syA||{})[s.id],m:syVal(x,s.id)})).filter(o=>o.v!=null&&o.v>(o.m??0)).sort((a,b)=>b.v-a.v);
+  // „Später am Tag“ (1.0.29): Kacheln zeigen den letzten Eintrag; je Eintrag eine Zeile mit Uhrzeit und den Symptomen, die höher als morgens sind
+  const LA=laterOf(x); const lastA=laterLast(x); const scA=lastA?symScore(lastA.sy):null; const tfA=laterTf(x); const abRows=symRows(x);
+  const abZeilen=LA.map(e=>({e,syms:abRows.map(s=>({s,v:(e.sy||{})[s.id],m:syVal(x,s.id)})).filter(o=>o.v!=null&&o.v>(o.m??0)).sort((a,b)=>b.v-a.v)}));
   const pv=P().versions.find(v=>v.from===k&&v.v>1);
   const nxRows=symRows(nx); const nxSyms=nxRows.map(s=>({s,v:syVal(nx,s.id)})).filter(o=>o.v>0).sort((a,b)=>b.v-a.v);
   // Aktivitäten ohne Block (Büro, Kochen, Tennis, Laufen, Pause) als Chip: Tipp → ändern oder löschen
@@ -2262,8 +2347,8 @@ function daySheet(k){
   const last=x.done.length?x.done.map(actChip).join(''):'<span class="act Pause">Pause</span>';
   const box=`<div class="dayx">
     ${future?`<div class="r"><span class="l">Geplant</span>${x.planned.map(chipOf).join('')||'<span class="hint">nichts geplant</span>'}</div>`:`<div class="r"><span class="l">Last</span>${last}</div>`}
-    <div class="r"><span class="l">Tag</span><span class="hint">Form</span>${tfTile(x.tf)}${x.tfA!=null?`<span class="tf small ${cls(x.tfA)}">${x.tfA}</span>`:''}<span class="hint">Sympt.</span>${syTile(symScore(x.sy))}${scA!=null?`<span class="sy sytile small ${clsSy(Math.round(scA))}" title="später">${fmtN(scA)}</span>`:''}<span class="hint">Schlaf</span><span style="font-size:12px;font-weight:600">${x.sleep==null?'–':x.sleep.toLocaleString('de-DE')+' h'+(x.sq?' '+x.sq.slice(0,1):'')}</span></div>
-    ${abSyms.length?`<div class="r"><span class="l">Später</span>${abSyms.map(o=>`<span class="sy ${clsSy(o.v)}"><span style="font-size:11px">${esc(symLabel(o.s,abRows))} </span>${o.v}</span>`).join('')}</div>`:''}
+    <div class="r"><span class="l">Tag</span><span class="hint">Form</span>${tfTile(x.tf)}${tfA!=null?`<span class="tf small ${cls(tfA)}">${tfA}</span>`:''}<span class="hint">Sympt.</span>${syTile(symScore(x.sy))}${scA!=null?`<span class="sy sytile small ${clsSy(Math.round(scA))}" title="später">${fmtN(scA)}</span>`:''}<span class="hint">Schlaf</span><span style="font-size:12px;font-weight:600">${x.sleep==null?'–':x.sleep.toLocaleString('de-DE')+' h'+(x.sq?' '+x.sq.slice(0,1):'')}</span></div>
+    ${abZeilen.map(z=>`<div class="r"><span class="l">Später ${laterZeit(z.e)}</span>${z.e.tf!=null?`<span class="hint">Form</span><span class="tf small ${cls(z.e.tf)}">${z.e.tf}</span>`:''}${z.syms.length?z.syms.map(o=>`<span class="sy ${clsSy(o.v)}"><span style="font-size:11px">${esc(symLabel(o.s,abRows))} </span>${o.v}</span>`).join(''):'<span class="hint">nichts höher als morgens</span>'}</div>`).join('')}
     ${x.note?`<div class="r" style="flex-wrap:nowrap;align-items:baseline"><span class="l">Notiz</span><span style="font-size:13px;flex:1;min-width:0">${esc(x.note)}</span></div>`:''}
     <div class="r"><span class="l">Folgetag</span>${nxLeer?'<span class="hint">noch keine Werte</span>':`<span class="hint">Form</span>${tfTile(nx.tf)}<span class="hint">Sympt.</span>${syTile(nxSc)}<span class="hint">am nächsten Morgen</span>`}</div>
     ${nxSyms.length?`<div class="r">${nxSyms.map(o=>`<span class="sy ${clsSy(o.v)}"><span style="font-size:11px">${esc(symLabel(o.s,nxRows))} </span>${o.v}</span>`).join('')}</div>`:''}
@@ -2275,6 +2360,7 @@ function daySheet(k){
   const journal=[...x.notes,...x.tests.map(t=>({k:'Test',t:`${t.n}: L ${t.l} · R ${t.r}`}))];
   openSheet(`<div class="daynav"><button class="chip sm" id="dPrev" aria-label="Vortag">‹<span class="dl"> Vortag</span></button><h3>${wd(d)}, ${fmt(d)}</h3><button class="chip sm" id="dNext" aria-label="Folgetag"${nextFut?' disabled':''}><span class="dl">Folgetag </span>›</button><button class="xbtn" id="dClose" aria-label="Schließen">✕</button></div>
   ${box}
+  ${future?'':'<button class="tog" id="dAna" style="font-size:13px;align-self:flex-start">Analyse: letzte 3 Tage ›</button>'}
   ${sessions||(x.done.some(a=>a.block||['K','I'].includes(a.type))?'<div class="hint">Training ohne Übungsliste erfasst.</div>':'<div class="hint">Kein Training an diesem Tag.</div>')}
   ${journal.length?`<div class="lbl">Journal</div><div class="list">${journal.map(n=>`<div class="item" style="padding:6px 0"><span class="badge">${n.k}</span><div class="t"><small style="color:var(--ink)">${esc(n.t)}</small></div></div>`).join('')}</div>`:''}
   ${future?'<div class="hint">Zukunft: nur Geplant.</div><button class="btn ghost" id="planDay">Diesen Tag planen</button>':`<div class="row"><button class="btn ghost" id="addTr">+ Training nachtragen</button><button class="btn ghost" id="addAk">+ Aktivität nachtragen</button></div>`}`,true);
@@ -2285,8 +2371,116 @@ function daySheet(k){
   const ak=document.getElementById('addAk'); if(ak)ak.onclick=()=>aktSheet(iso(d));
   document.querySelectorAll('#sheet [data-aedit2]').forEach(b=>b.onclick=()=>aktEditSheet(k,+b.dataset.aedit2,()=>daySheet(k)));
   const pd=document.getElementById('planDay'); if(pd)pd.onclick=()=>planSheet(k);
+  const da=document.getElementById('dAna'); if(da)da.onclick=()=>anaSheet(k);
   document.querySelectorAll('[data-cont2]').forEach(b=>b.onclick=()=>{closeSheet();startSession(b.dataset.cont2,iso(d));setTab('training')});
 }
+
+// ---------- Analyse (1.0.29, Idee 10. und 11.10.2026, docs/STAND.md „Analyse-Ansicht“) ----------
+// Liste von Tagen, neueste oben, zum Zusammensuchen an schlechten Tagen: Belastung, Symptome morgens → „Später am Tag“ (je Eintrag mit Uhrzeit)
+// → nächster Morgen, Einheiten mit Position, Kennzeichen und Notizen, Änderungen des Tages. Filter: Zeitraum, Suche, Position, „Symptom ↑“.
+// Bewusst keine Zählung je Übung, keine markierten Verdächtigen, keine Trends (Regel „Der Nutzer vergleicht selbst“); die Symptomänderung hängt am Tag.
+const ANA={q:'',range:3,pos:'',sym:'',end:null,scroll:0};
+const ANA_RANGE=[[3,'3 Tage'],[14,'2 Wochen'],[90,'3 Monate']];
+const anaLow=v=>String(v||'').toLowerCase();
+// Treffer der Suche markieren (ohne reguläre Ausdrücke, Groß- und Kleinschreibung egal)
+function anaHl(t){const q=ANA.q.trim();const s=String(t??'');if(!q)return esc(s);const lo=s.toLowerCase(),ql=q.toLowerCase();let out='',i=0,j;
+  while((j=lo.indexOf(ql,i))>=0){out+=esc(s.slice(i,j))+'<mark class="anam">'+esc(s.slice(j,j+q.length))+'</mark>';i=j+q.length}return out+esc(s.slice(i))}
+// erster Tag, an dem eine Übung gemacht wurde (Kennzeichen „neu“)
+function anaErst(){const f={};Object.keys(S.days).sort().forEach(k=>(S.days[k].done||[]).forEach(a=>(a.ex||[]).forEach(i=>{if(i&&i.r&&!i.skip&&!f[i.id])f[i.id]=k})));return f}
+// „Symptom ↑“: später am Tag (ein Eintrag) oder am nächsten Morgen höher als morgens
+function anaHoeher(k,id){const x=S.days[k];const m=syVal(x,id);if(m==null)return false;
+  if(laterOf(x).some(e=>e.sy&&e.sy[id]!=null&&e.sy[id]>m))return true;
+  const nk=iso(addD(new Date(k+'T12:00:00'),1));if(nk>iso(today))return false;const v=syVal(S.days[nk],id);return v!=null&&v>m}
+// alles, was die Analyse zu einem Tag zeigt und durchsucht
+function anaTag(k,erst){
+  const x=S.days[k];if(!x)return null;
+  const ses=[],akt=[];
+  (x.done||[]).forEach(a=>{
+    if(a.ex){const ts=a.ex.map(i=>i&&i.t).filter(Boolean);
+      const ex=a.ex.filter(i=>i&&exById(i.id)).map(i=>{const e=exById(i.id);
+        const notes=[...(i.note?[i.note]:[]),...((S.exNotes||{})[i.id]||[]).filter(n=>n&&n.d===k&&n.t).map(n=>n.t)];
+        return {i,e,notes,done:!!i.r&&!i.skip,weg:!!i.skip||(!i.r&&!a.open),offen:!i.r&&!i.skip&&!!a.open,neu:!!i.r&&!i.skip&&erst[i.id]===k}});
+      ses.push({a,zeit:ts.length?hhmm(Math.min(...ts)):'',ex,stand:sessState(a,k)})}
+    else if(a.block)ses.push({a,zeit:'',ex:null,stand:'ohne Übungsliste'});
+    else akt.push(a)});
+  const inSes=new Set(ses.flatMap(o=>(o.ex||[]).map(z=>z.i.id)));
+  const exNotizen=Object.entries(S.exNotes||{}).flatMap(([id,arr])=>inSes.has(id)||!exById(id)?[]:(arr||[]).filter(n=>n&&n.d===k&&n.t).map(n=>({name:exById(id).name,t:n.t})));
+  const pv=P().versions.filter(v=>v.from===k&&v.v>1).map(v=>({b:'Plan v'+v.v,t:v.change}));
+  const ev=(P().events||[]).filter(e=>e.d===k).map(e=>({b:'Plan',t:e.t}));
+  const jr=[...(x.note?[{b:'Notiz',t:x.note}]:[]),...(x.notes||[]).map(n=>({b:n.k||'Journal',t:n.t+(n.b?' ('+n.b+')':'')}))];
+  const leer=x.tf==null&&!Object.keys(x.sy||{}).length&&!laterOf(x).length&&!(x.done||[]).length&&!exNotizen.length&&!jr.length&&!pv.length&&!ev.length&&!(x.chips||[]).length;
+  const text=anaLow([...ses.flatMap(o=>(o.ex||[]).flatMap(z=>[z.e.name,...z.notes])),...ses.map(o=>labelOf(o.a.block)),...akt.map(a=>aktLabel(a)+' '+(a.note||'')),...(x.chips||[]),...exNotizen.flatMap(n=>[n.name,n.t]),...pv.map(o=>o.t),...ev.map(o=>o.t),...jr.map(o=>o.t)].join(' \n '));
+  return {k,x,ses,akt,exNotizen,aend:[...pv,...ev],jr,leer,text};
+}
+function anaPasst(o){
+  if(ANA.q.trim()&&!o.text.includes(ANA.q.trim().toLowerCase()))return false;
+  if(ANA.pos&&!o.ses.some(s=>(s.ex||[]).some(z=>z.done&&z.e.pos===+ANA.pos)))return false;
+  if(ANA.sym&&!anaHoeher(o.k,ANA.sym))return false;
+  return true}
+// Symptome: morgens | jede Erfassung „Später am Tag“ | nächster Morgen; nur Zeilen mit Änderung
+function anaSymTab(o){
+  const x=o.x; const nk=iso(addD(new Date(o.k+'T12:00:00'),1)); const n=nk<=iso(today)?S.days[nk]:null;
+  const morgen=x.tf!=null||Object.keys(x.sy||{}).length;
+  const cols=laterOf(x).map(e=>({h:'später<br>'+laterZeit(e),tf:e.tf,sy:e.sy||{}}));
+  if(n&&(n.tf!=null||Object.keys(n.sy||{}).length))cols.push({h:'Folgetag',tf:n.tf,sy:n.sy||{}});
+  if(!morgen)return cols.length?'<div class="anaq">Kein Morgen-Check-in.</div>':'';
+  if(!cols.length)return '<div class="anaq">Noch nichts später erfasst.</div>';
+  const syms=symList().filter(s=>{const m=syVal(x,s.id);return cols.some(c=>c.sy[s.id]!=null&&c.sy[s.id]!==m)});
+  const tfAnders=cols.some(c=>c.tf!=null&&c.tf!==x.tf);
+  if(!syms.length&&!tfAnders)return '<div class="anaq">Später und am Folgetag keine Änderung.</div>';
+  const zelle=(v,m,tf)=>{if(v==null)return '<td><span class="sy same">·</span></td>';const c=tf?'tf '+cls(v):'sy '+clsSy(v);return `<td><span class="${c}${v===m?' same':''}${!tf&&m!=null&&v>m?' up':''}">${v}</span></td>`};
+  let h=`<div class="anasy"><table><thead><tr><th></th><th>morgens</th>${cols.map(c=>`<th>${c.h}</th>`).join('')}</tr></thead><tbody>`;
+  if(tfAnders)h+=`<tr><td>Tagesform</td><td>${x.tf==null?'<span class="sy same">·</span>':`<span class="tf ${cls(x.tf)}">${x.tf}</span>`}</td>${cols.map(c=>zelle(c.tf,x.tf,true)).join('')}</tr>`;
+  syms.forEach(s=>{const m=syVal(x,s.id);h+=`<tr class="${ANA.sym===s.id?'hl':''}"><td>${esc(symLabel(s,symList()))}</td><td>${m==null?'<span class="sy same">·</span>':`<span class="sy ${clsSy(m)}">${m}</span>`}</td>${cols.map(c=>zelle(c.sy[s.id],m,false)).join('')}</tr>`});
+  return h+'</tbody></table></div>'}
+function anaTagHtml(o){
+  const x=o.x; const d=new Date(o.k+'T12:00:00');
+  const last=[...o.akt.map(a=>`<span class="act ${a.type}">${anaHl(aktLabel(a))}</span>${a.note?`<span class="hint">${anaHl(a.note)}</span>`:''}`),...(x.chips||[]).map(c=>`<span class="badge">${anaHl(c)}</span>`)].join('');
+  const trefferEx=z=>(ANA.pos&&z.e.pos===+ANA.pos)||(ANA.q.trim()&&(anaLow(z.e.name).includes(ANA.q.trim().toLowerCase())||z.notes.some(t=>anaLow(t).includes(ANA.q.trim().toLowerCase()))));
+  const ses=o.ses.map(sv=>`<div class="anas"><div class="sh"><span class="act ${sv.a.type}">${TYPES[sv.a.type]?TYPES[sv.a.type].l:sv.a.type}</span><b>${anaHl(labelOf(sv.a.block))}</b>${sv.zeit?`<span class="hint">${sv.zeit}</span>`:''}<span class="hint">· ${esc(sv.stand)}</span></div>
+    ${sv.ex?`<ul class="anaex">${sv.ex.map(z=>`<li class="${z.weg?'skip':''}${trefferEx(z)?' hit':''}"><span class="en"><b>${anaHl(z.e.name)}</b>${posOf(z.e.pos)?`<span class="pos">${esc(posName(z.e.pos))}</span>`:''}${z.neu?'<span class="badge neu">neu</span>':''}${z.i.extra?'<span class="badge">außerplanmäßig</span>':''}${z.i.pain?'<span class="badge prob">!</span>':''}${z.weg?'<span class="badge">weggelassen</span>':''}${z.offen?'<span class="badge">offen</span>':''}</span>${z.notes.map(t=>`<span class="ananote">${anaHl(t)}</span>`).join('')}</li>`).join('')}</ul>`:''}</div>`).join('');
+  const notizen=o.exNotizen.length?`<div class="anaj">${o.exNotizen.map(n=>`<div><span class="badge">Notiz</span><span><b style="font-weight:600;color:var(--ink)">${anaHl(n.name)}</b> ${anaHl(n.t)}</span></div>`).join('')}</div>`:'';
+  const aend=o.aend.length||o.jr.length?`<div class="anaj">${[...o.aend,...o.jr].map(c=>`<div><span class="badge">${esc(c.b)}</span><span>${anaHl(c.t)}</span></div>`).join('')}</div>`:'';
+  return `<div class="anad"><button class="anah" data-anad="${o.k}" aria-label="${wd(d)}, ${fmt(d)}: Tagesdetail öffnen"><span class="dd">${wd(d)} ${fmt(d)}</span><span class="hint">Form</span><span class="tf ${cls(x.tf)}">${x.tf??'–'}</span><span class="hint">Schlaf ${x.sleep==null?'–':x.sleep.toLocaleString('de-DE')+' h'+(x.sq?' '+x.sq:'')}</span><span class="chev" aria-hidden="true">›</span></button>
+    ${last?`<div class="row" style="gap:6px">${last}</div>`:''}
+    ${anaSymTab(o)}
+    ${ses||(o.akt.length?'':'<div class="anaq">Kein Training.</div>')}
+    ${notizen}${aend}</div>`}
+function anaListe(){
+  const ende=ANA.end||iso(today); const e=new Date(ende+'T12:00:00'); const erst=anaErst();
+  const pool=[...Array(ANA.range).keys()].map(i=>iso(addD(e,-i))).map(k=>anaTag(k,erst)).filter(o=>o&&!o.leer);
+  const shown=pool.filter(anaPasst); const gefiltert=!!(ANA.q.trim()||ANA.pos||ANA.sym);
+  const L=document.getElementById('anaL'); if(!L)return;
+  const zr=(ANA_RANGE.find(r=>r[0]===ANA.range)||[0,''])[1];
+  L.innerHTML=shown.length?shown.map(anaTagHtml).join(''):`<div class="anaempty"><span>${gefiltert?'Keine Tage passen zu den Filtern.':'Keine Einträge in diesem Zeitraum.'}</span>${ANA.range<90?'<button class="tog" id="anaWeiter" style="font-size:13px">Zeitraum: 3 Monate</button>':''}</div>`;
+  document.getElementById('anaN').textContent=`${zr}${ANA.end&&ANA.end!==iso(today)?' bis '+dfmt(ANA.end):''} · `+(gefiltert?`${shown.length} von ${pool.length} Tagen passen`:`${pool.length} ${pool.length===1?'Tag':'Tage'} mit Einträgen`);
+  document.getElementById('anaX').hidden=!gefiltert;
+  document.getElementById('anaP').classList.toggle('on',!!ANA.pos); document.getElementById('anaS').classList.toggle('on',!!ANA.sym);
+  const w=document.getElementById('anaWeiter'); if(w)w.onclick=()=>{ANA.range=90;document.getElementById('anaR').value='90';anaListe()};
+  L.querySelectorAll('[data-anad]').forEach(b=>b.onclick=()=>{ANA.scroll=sheet.scrollTop;daySheet(b.dataset.anad);sheet.dataset.back='ana'})}
+// end = Tag, bis zu dem zurückgeschaut wird (null = heute); zurueck = Rückkehr aus dem Tagesdetail (Filter und Scrollstand bleiben)
+function anaSheet(end,zurueck){
+  if(!zurueck){ANA.q='';ANA.pos='';ANA.sym='';ANA.range=3;ANA.scroll=0;ANA.end=end&&end!==iso(today)?end:null}
+  const symOpts=symList().filter(s=>s.active||Object.values(S.days).some(x=>syVal(x,s.id)!=null));
+  openSheet(`<div class="daynav"><h3>Analyse</h3><button class="xbtn" id="anaC" aria-label="Schließen">✕</button></div>
+  <div class="anaf">
+    <input type="search" id="anaQ" placeholder="Suche in Notizen und Übungen, z. B. Knie" aria-label="Suche in Notizen und Übungen" autocomplete="off" value="${esc(ANA.q)}">
+    <div class="chips"><select class="chip sm anasel" id="anaR" aria-label="Zeitraum">${ANA_RANGE.map(([v,l])=>`<option value="${v}"${ANA.range===v?' selected':''}>${l}</option>`).join('')}</select>
+      <select class="chip sm anasel" id="anaP" aria-label="Position"><option value="">Position: alle</option>${POS.map(p=>`<option value="${p[0]}"${String(p[0])===ANA.pos?' selected':''}>${esc(posName(p[0]))}</option>`).join('')}</select>
+      <select class="chip sm anasel" id="anaS" aria-label="Symptom höher als morgens"><option value="">Symptom ↑: alle</option>${symOpts.map(s=>`<option value="${s.id}"${s.id===ANA.sym?' selected':''}>↑ ${esc(symName(s))}</option>`).join('')}</select></div>
+    <div class="row between"><span class="hint" id="anaN"></span><button class="tog" id="anaX" style="font-size:12px" hidden>Filter zurücksetzen</button></div>
+  </div>
+  <div class="anal" id="anaL"></div>
+  <div class="hint">Stellt nur zusammen, was erfasst ist, ohne Deutung. „Symptom ↑“: später am Tag oder am nächsten Morgen höher als morgens. Tipp auf einen Tag öffnet das Tagesdetail, Zurück führt hierher.</div>`,true);
+  // ein gesetzter Filter erweitert „3 Tage“ auf 3 Monate (Annahme, festgehalten in docs/STAND.md)
+  const weiter=()=>{if(ANA.range===3){ANA.range=90;document.getElementById('anaR').value='90';toast('Zeitraum auf 3 Monate erweitert')}};
+  document.getElementById('anaC').onclick=closeSheet;
+  document.getElementById('anaQ').addEventListener('input',e=>{const neu=!ANA.q.trim()&&e.target.value.trim();ANA.q=e.target.value;if(neu)weiter();anaListe()});
+  document.getElementById('anaR').onchange=e=>{ANA.range=+e.target.value;anaListe()};
+  document.getElementById('anaP').onchange=e=>{ANA.pos=e.target.value;if(ANA.pos)weiter();anaListe()};
+  document.getElementById('anaS').onchange=e=>{ANA.sym=e.target.value;if(ANA.sym)weiter();anaListe()};
+  document.getElementById('anaX').onclick=()=>{ANA.q='';ANA.pos='';ANA.sym='';document.getElementById('anaQ').value='';document.getElementById('anaP').value='';document.getElementById('anaS').value='';anaListe()};
+  anaListe(); if(zurueck)sheet.scrollTop=ANA.scroll||0}
 
 // ---------- Notiz, Aktivität, Rettung, Tests ----------
 function aktSheet(dateIso,preType){
