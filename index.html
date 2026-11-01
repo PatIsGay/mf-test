@@ -259,6 +259,7 @@
     nav.tabs .bar{max-width:none;width:100%;height:100%;grid-template-columns:1fr;grid-auto-rows:min-content;align-content:center;gap:6px;border-top:0;border-right:1px solid var(--line);padding:6px 6px 6px calc(6px + env(safe-area-inset-left,0px))}
     nav.tabs button{font-size:10px;padding:6px 0}
     html.kalq .proto,html.kalq .top{display:none}
+    html.kalq th.anath .tog{display:inline}
     html.kalq .app{max-width:none;border:0}
     html.kalq main{padding:8px 12px 24px;gap:10px}
     html.kalq table.kalm{width:100%}
@@ -472,6 +473,23 @@
   .abt{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--ink2);min-width:38px}
   /* Analyse (1.0.29): Filter oben fest im Sheet, darunter die Tage */
   table.matrix th.anath{vertical-align:middle;text-align:left}
+  /* 1.0.30: hochkant steht „Analyse ›“ oben in der Kopfzeile (#anaTop); der Link in der Ecke nur im Querformat (Kopfzeile dort ausgeblendet) */
+  th.anath .tog{display:none}
+  .topr{display:flex;align-items:center;gap:12px}
+  #anaTop{color:var(--accent);border-color:var(--accent-soft);background:var(--accent-soft)}
+  /* Fokus (1.0.30): oben im Training, eingeklappt eine Zeile */
+  .card.fokus{padding:10px 14px}
+  .fokush{display:flex;align-items:center;gap:8px;width:100%;text-align:left;min-height:28px}
+  .fokush .fl{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);font-weight:700}
+  .fokush .chev{margin-left:auto;color:var(--ink3);font-weight:700}
+  .fokustx{white-space:pre-line;font-size:14px;line-height:1.45;margin-top:6px;overflow-wrap:anywhere}
+  .fokustx.sm{font-size:13px;color:var(--ink2);margin-top:2px}
+  .fokusalt{display:flex;flex-direction:column;gap:8px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+  .fokusalt .nd{font-size:12px;font-weight:600;color:var(--ink2);display:block}
+  #fokusTx{margin-top:8px;min-height:96px}
+  /* Fragen und Überlegungen (1.0.30): Karte im Plan */
+  #fuCard .item.fu .t small{display:block}
+  #fuCard .fulast{color:var(--ink2);overflow-wrap:anywhere}
   .anaf{position:sticky;top:-14px;z-index:2;background:var(--surface);margin:0 -16px;padding:6px 16px 8px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
   .anaf input[type=search]{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--surface);font-size:14px}
   .anaf .chips{gap:6px}
@@ -582,7 +600,7 @@
   <div class="proto" id="kanalBanner" hidden></div>
   <header class="top">
     <div><h1 id="title">Heute</h1><div class="sub" id="subtitle"></div></div>
-    <button class="menu" id="mehr">Mehr</button>
+    <div class="topr"><button class="chip sm" id="anaTop" hidden>Analyse ›</button><button class="menu" id="mehr">Mehr</button></div>
   </header>
   <button class="updrow" id="updRow" hidden><span>Neue Version verfügbar</span><span class="go">Laden</span></button>
   <main id="main"></main>
@@ -602,7 +620,7 @@
 // /test/ (lokal, app/test/) oder ?kanal=test
 const KANAL = (window.MFLOG_KANAL) || (/\/(mf-)?test\//.test(location.pathname) || /[?&]kanal=test\b/.test(location.search) ? 'test' : 'app');
 const TEST = KANAL==='test';
-const APP_VERSION='1.0.29';
+const APP_VERSION='1.0.30';
 const STORE_KEY = TEST?'mflog-test-v1':'mflog-v1';
 const APP_NAME = TEST?'MF-Log Test':'MF-Log';
 document.title = APP_NAME;
@@ -890,6 +908,10 @@ function hydrate(obj){
   {const da=new Set(TESTS.filter(t=>!S.testDeleted.includes(t.n)).map(t=>testKey(t.n)));
    S.customTests=(Array.isArray(S.customTests)?S.customTests:[]).filter(t=>{if(!t||typeof t!=='object'||typeof t.n!=='string'||!t.n.trim()||da.has(testKey(t.n)))return false;
      da.add(testKey(t.n));if(typeof t.u!=='string')t.u='';if(!TEST_GRUPPEN.includes(t.g))t.g='Eigene';t.single=!!t.single;t.a=!!t.a;return true})}
+  // 1.0.30: Fokus (S.fokus=[{d,t,text}], neuester zuletzt) und Fragen und Überlegungen (S.fragen=[{id,d,t,n:[{d,t}],done}]); unbrauchbare Einträge fallen weg
+  S.fokus=(Array.isArray(S.fokus)?S.fokus:[]).filter(f=>f&&typeof f.d==='string'&&typeof f.text==='string').map(f=>({d:f.d,t:typeof f.t==='number'?f.t:null,text:f.text})).sort((a,b)=>a.d.localeCompare(b.d));
+  S.fragen=(Array.isArray(S.fragen)?S.fragen:[]).filter(x=>x&&typeof x.t==='string'&&x.t.trim()&&typeof x.d==='string').map(x=>({id:typeof x.id==='string'&&x.id?x.id:fuNeueId(),d:x.d,t:x.t,n:(Array.isArray(x.n)?x.n:[]).filter(n=>n&&typeof n.t==='string'&&typeof n.d==='string').map(n=>({d:n.d,t:n.t})),done:typeof x.done==='string'?x.done:null}));
+  if(typeof S.fokusDraft!=='string')S.fokusDraft=null; S.fokusEdit=false;
   // leere Symptomliste ist erlaubt (alle gelöscht); nur ein fehlender Eintrag wird neu belegt
   if(!Array.isArray(S.symptoms))S.symptoms=SYM_SEED.map(s=>Object.assign({},s));
   Object.values(S.days).forEach(dd=>{if(!dd.sy||Array.isArray(dd.sy))dd.sy={};
@@ -918,7 +940,10 @@ function freshState(){
     exNotes:TEST?{e4:[{d:iso(addD(today,-3)),t:'Verdacht: danach Knie außen r schlechter. Nochmal gezielt mit Retest prüfen.'}]}:{},
     rettung:RETT_SEED(),
     // Test-Katalog (1.0.24): eigene Tests, gelöschte eingebaute Tests, „im Assessment“ abweichend vom Standard
-    customTests:[],testDeleted:[],testAssess:{}};
+    customTests:[],testDeleted:[],testAssess:{},
+    // 1.0.30: Fokus und Fragen und Überlegungen; im Testkanal neutrale Beispiele
+    fokus:TEST?[{d:iso(addD(today,-9)),t:null,text:'Ruhig ausatmen, Schultern locker.'},{d:iso(addD(today,-2)),t:null,text:'Ruhig ausatmen, Schultern locker.\nGewicht gleichmäßig auf beide Füße.'}]:[],
+    fragen:TEST?[{id:'f1',d:iso(addD(today,-5)),t:'Warum zieht es beim Bücken im Knie?',n:[],done:null}]:[]};
   resetContent(); initPlan(); S.days=TEST?seedDays():{}; fixKalRows(); ensureDay(iso(today));
 }
 // Gespeicherter Stand, der sich nicht lesen lässt, wird nicht überschrieben, sondern unter STORE_KEY+'-defekt' gesichert
@@ -1005,6 +1030,7 @@ const main=document.getElementById('main');
 function setTab(t){if(t!=='training')stopTimer();if(t!=='training'&&S.session&&S.sessShow){parkSession();if(S.session.date===iso(today))S.trOpen=S.session.block}S.tab=t;document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));save();render()}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 document.getElementById('mehr').addEventListener('click',()=>mehrSheet());
+document.getElementById('anaTop').addEventListener('click',()=>anaSheet(null));
 // Höhe der Tab-Leiste für die feste Fußleiste der laufenden Einheit (#sessbar sitzt direkt darüber)
 function setTabH(){const b=document.querySelector('nav.tabs .bar');if(b)document.documentElement.style.setProperty('--tabh',b.offsetHeight+'px')}
 window.addEventListener('resize',setTabH);
@@ -1022,6 +1048,7 @@ function render(){
   vidCheck(); const vk=vidKeep();
   ({heute:rHeute,training:rTraining,bib:rBib,kal:rKal})[S.tab]();
   vidPlace(vk); vidThumbs(); notesFit(); cueInputBind(); wakeSync();
+  const at=document.getElementById('anaTop'); if(at)at.hidden=S.tab!=='kal';
   save();
 }
 // Notizlisten (Karte und Training): Liste endet nach der NOTE_MAX-ten Notiz (Zeilen können umbrechen, darum gemessen, mit Bruchteilen
@@ -1289,9 +1316,10 @@ function rTraining(){
     const rest=P().blocks.filter(b=>!rowIds.includes(b.id));
     // geparkte Einheit eines anderen Tages (Nachtrag): eigene Zeile über „Heute dran“, sonst wäre sie im Training nicht erreichbar
     const runOther=s&&s.date!==tk?`<section class="card" id="trRun"><h2>Nachtrag <span class="badge">${dfmt(s.date)}</span></h2><div class="trlist"><div class="trrow"><div class="trsport"><div class="t"><b>${esc(s.label)}</b><span class="trst">${esc((a=>a?runState(a,s.date):'läuft')((S.days[s.date]||{done:[]}).done[findEntry(s.date,s.block)]))}</span></div><button class="btn primary" id="runGo" style="padding:7px 12px;font-size:13px">Weitermachen</button></div></div></div></section>`:'';
-    main.innerHTML=`${runOther}<section class="card" id="trToday"><h2>Heute dran</h2><div class="trlist">${todayRows||`<div class="hint">${!P().blocks.length?'Noch kein Plan. Blöcke legst du unter Bibliothek → Plan an. Ohne Plan: unten „Freies Training“.':d.planned.includes('Pause')?'Heute ist Pause geplant.':'Heute nichts geplant.'}</div>`}</div></section>
+    main.innerHTML=`${fokusHtml()}${runOther}<section class="card" id="trToday"><h2>Heute dran</h2><div class="trlist">${todayRows||`<div class="hint">${!P().blocks.length?'Noch kein Plan. Blöcke legst du unter Bibliothek → Plan an. Ohne Plan: unten „Freies Training“.':d.planned.includes('Pause')?'Heute ist Pause geplant.':'Heute nichts geplant.'}</div>`}</div></section>
     <section class="card" id="trMore"><h2>Weitere</h2><div class="trlist">${rest.map(b=>blockRow(b.id,true)).join('')}${PLAN_ACTS.filter(t=>!d.planned.includes(t)).map(t=>sportRow(t,false)).join('')}${rowIds.includes('F')?'':`<div class="trrow" data-free="1"><div class="trsport"><div class="t"><b>Freies Training</b><span class="trst">ohne Block</span></div><button class="btn ghost" data-go="F" style="padding:7px 12px;font-size:13px">Leer starten</button></div></div>`}</div></section>
     ${S.trainingHintSeen?'':`<section class="card" id="trHint"><div class="row between" style="flex-wrap:nowrap;margin-bottom:10px"><h2 style="margin:0">Was passiert danach</h2><button class="tog hx" id="trHintX" aria-label="Hinweis ausblenden">✕</button></div><div class="hint">Pro Block und Tag gibt es genau eine Einheit. Sie speichert sich selbst; du kannst jederzeit die Seite verlassen und über „Weitermachen“ zurückkehren. „Fertig“ schließt sie ab, nicht abgehakte Übungen gelten dann als weggelassen. Ein offener Block gilt am Tagesende als unvollständig.</div></section>`}`;
+    fokusBind();
     const hx=document.getElementById('trHintX'); if(hx)hx.onclick=()=>{S.trainingHintSeen=true;render()};
     document.querySelectorAll('[data-trtog]').forEach(b=>b.onclick=()=>{const k=b.dataset.trtog;S.trOpen=S.trOpen===k?null:k;render()});
     // Starten/Weitermachen: eine andere laufende Einheit bleibt offen gespeichert (keine Rückfrage), startSession übernimmt
@@ -1342,8 +1370,10 @@ function rTraining(){
   const done=s.items.filter(i=>i.r).length, total=s.items.filter(i=>!i.skip).length, todo=s.items.filter(exTodo).length;
   main.innerHTML=`<section class="card" id="sesshead"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><b>${esc(s.label)}</b>${s.date!==iso(today)?` <span class="badge">Nachtrag ${dfmt(s.date)}</span>`:''}${s.snapshot!=null?' <span class="badge">fortgesetzt</span>':''}<div class="hint" style="display:flex;align-items:center;gap:8px">${done} von ${total} gemacht · ${durStr(sessMin(s))}${qBtn('haken')}</div></div><button class="btn ghost" id="addEx">+ Übung</button></div>${qHint('haken','Haken = gemacht. „!“ = Problem bei der Ausführung oder Schmerz, schreib kurz dazu, was war. Wirkung misst du mit „Test davor“, die Reaktion später am Tag und am Folgetag zeigt der Kalender.','margin-top:8px')}
     <div class="row" style="margin-top:4px;justify-content:flex-end"><button class="tog danger" id="abort">Verwerfen</button></div></section>
+  ${fokusHtml()}
   <section class="card"><div class="list" id="exlist">${rows}</div></section>
   <div id="sessbar"><button class="btn primary" id="fin">${todo?`Fertig · ${todo} offen`:'Fertig'}</button></div>`;
+  fokusBind();
   const list=document.getElementById('exlist');
   // Wischen: links = überspringen, rechts = doch machen
   let sw=null;
@@ -2040,6 +2070,7 @@ function rBib(){
 }
 // Plan, Tests und Verlauf als Vollbild-Sheet; keep=true behält die Scrollposition beim Neuzeichnen
 function openBibSheet(kind,keep){
+  if(!keep)FU_NEU=false;
   const p=P(); const cur=p.versions[p.versions.length-1];
   const re=()=>{render();openBibSheet(kind,true)};
   const T={plan:'Plan',tests:'Tests',verlauf:'Verlauf'}[kind];
@@ -2047,6 +2078,7 @@ function openBibSheet(kind,keep){
   if(kind==='plan'){
     const block=b=>`<section class="card"><div class="row between" style="margin-bottom:8px"><button class="blockhead" data-bedit="${b.id}">${esc(b.name)}<span class="pen">ändern</span></button><span class="act ${b.type}">${TYPES[b.type].l}</span></div><div class="list" data-sortblock="${b.id}">${b.items.map(([id,,sd])=>{const e=exById(id);return `<div class="item sortrow">${b.items.length>1?DRAGH:''}<div class="t"><b>${esc(e.name)}${exStatus(e)==='testphase'?' <span class="badge test">Testphase</span>':''}</b><small><button class="dchip" data-pdose="${b.id}:${id}">${doseStr(e.d)}</button>${sideLbl(sd)||(e.side==='getrennt'?' · L/R':'')}</small><button class="goalline${exTests(id).length?'':' none'}" data-extests="${id}">${exTestsLine(e,sd)}</button></div><button class="chip sm" data-swap="${b.id}:${id}">tauschen</button><button class="chip sm" data-rm="${b.id}:${id}">−</button></div>`}).join('')||'<div class="hint">leer</div>'}</div><button class="btn ghost wide" style="margin-top:8px" data-add="${b.id}">+ Übung in Block</button></section>`;
     html=`<section class="card"><div class="row between"><div><h2 style="margin:0">Plan v${cur.v} · seit ${dfmt(cur.from)} · ${daysBetween(cur.from,iso(today))} Tage</h2><small class="hint">${(s=>s.sess?`${s.full} von ${s.sess} Einheit${s.sess===1?'':'en'} vollständig`:'noch keine Einheit')(stats([...Array(Math.max(daysBetween(cur.from,iso(today)),1)).keys()].map(i=>addD(new Date(cur.from+'T12:00:00'),i))))}</small></div><button class="chip sm" id="toVerlauf">Verlauf ›</button></div><div class="lbl" style="margin-top:8px">Ziele</div><div class="list">${P().ziele.map(z=>`<button class="item goal" data-goal="${z.id}"><span class="t">${goalHtml(z)}</span><span class="go">›</span></button>`).join('')||'<div class="hint">Noch kein Ziel.</div>'}</div><button class="btn ghost wide" style="margin-top:6px" id="goalAdd">+ Ziel</button></section>
+    ${fuHtml()}
     <section class="card" id="rasterCard"><div class="row between" style="margin-bottom:10px;flex-wrap:nowrap"><h2 style="margin:0">Wochenraster</h2>${qBtn('raster')}</div><div class="raster">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(w=>`<div class="d ${wd(today)===w?'today':''}" data-w="${w}">${w}${(p.raster[w]||[]).map(t=>{const bb=blockById(t);return bb?`<span class="bsw ${bb.type}" title="${esc(bb.name)}">${esc(shortN(bb.name))}</span>`:`<span class="sw ${t}" title="${TYPES[t]?TYPES[t].l:t}"></span>`}).join('')||'<span class="sw" style="background:transparent"></span>'}</div>`).join('')}</div>
     <div class="legend" style="margin-top:8px"><span><i style="background:var(--k)"></i>Korrektiv</span><span><i style="background:var(--i)"></i>Intensiv</span><span><i style="background:var(--tennis)"></i>Tennis</span><span><i style="background:var(--laufen)"></i>Laufen</span><span><i style="background:var(--pause)"></i>Pause</span></div>
     ${qHint('raster','Tipp auf einen Tag ändert das Raster ab heute. Erscheint im Verlauf, erzeugt aber keine neue Version. Einzelne Tage planst du im Kalender über die Zeile Geplant.','margin-top:6px')}</section>
@@ -2096,6 +2128,13 @@ function openBibSheet(kind,keep){
     document.getElementById('toVerlauf').onclick=()=>openBibSheet('verlauf');
     document.querySelectorAll('#sheet [data-bedit]').forEach(b=>b.onclick=()=>sub(()=>blockSheet(b.dataset.bedit,re)));
     document.getElementById('newBlock').onclick=()=>sub(()=>newBlockSheet(re));
+    // Fragen und Überlegungen: „+“ öffnet das Feld (nie von selbst), ✓ oder Eingabetaste speichert; Tipp auf einen Eintrag öffnet ihn
+    const fp=document.getElementById('fuPlus'); if(fp)fp.onclick=()=>{FU_NEU=true;openBibSheet('plan',true);const i=document.getElementById('fuTx');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}};
+    const fuOk=()=>{const i=document.getElementById('fuTx');const v=(i&&i.value||'').trim();FU_NEU=false;S.fuDraft='';if(v){if(!Array.isArray(S.fragen))S.fragen=[];S.fragen.push({id:fuNeueId(),d:iso(today),t:v,n:[],done:null});save();toast('Gespeichert')}openBibSheet('plan',true)};
+    const fo=document.getElementById('fuOk'); if(fo)fo.onclick=fuOk;
+    const ft=document.getElementById('fuTx'); if(ft){ft.addEventListener('input',()=>{S.fuDraft=ft.value;save()});ft.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fuOk()}})}
+    document.querySelectorAll('#sheet [data-fu]').forEach(b=>b.onclick=()=>sub(()=>frageSheet(b.dataset.fu,re)));
+    const fe=document.getElementById('fuErlT'); if(fe)fe.onclick=()=>{S.fuErl=!S.fuErl;openBibSheet('plan',true)};
     // Ziele ändern und neu anlegen, Absicht der Übung (soll verbessern) bearbeiten; Abbruch führt ins Plan-Sheet zurück
     document.querySelectorAll('#sheet [data-goal]').forEach(b=>b.onclick=()=>sub(()=>goalSheet(P().ziele.find(z=>z.id===b.dataset.goal),re)));
     document.getElementById('goalAdd').onclick=()=>sub(()=>goalSheet(null,re));
@@ -2375,6 +2414,63 @@ function daySheet(k){
   document.querySelectorAll('[data-cont2]').forEach(b=>b.onclick=()=>{closeSheet();startSession(b.dataset.cont2,iso(d));setTab('training')});
 }
 
+// ---------- Fokus (1.0.30, Ablauf vom Nutzer bestätigt 01.11.2026) ----------
+// Die wenigen Dinge, auf die der Nutzer in letzter Zeit achtet, weil sie helfen. S.fokus=[{d,t,text}] (d = Tag, t = Zeitpunkt), neuester zuletzt;
+// mehrmals am selben Tag ändern ersetzt den Fokus dieses Tages. Im Training oben eingeklappt („Fokus seit 09.11. ▸“); „Fokus ändern“ ist mit dem
+// bisherigen Text vorbelegt (Entwurf S.fokusDraft, speichert beim Tippen). Der frühere Fokus bleibt erhalten (Liste „früherer Fokus“, Analyse am Tag der Änderung).
+const fokusAkt=()=>{const f=Array.isArray(S.fokus)?S.fokus:[];return f.length?f[f.length-1]:null};
+function fokusHtml(){
+  const f=fokusAkt(); const alt=(S.fokus||[]).slice(0,-1).reverse(); const open=!!S.fokusOpen, edit=!!S.fokusEdit; const leer=!f||!f.text.trim();
+  const kopf=`<button class="fokush" id="fokusTog" aria-expanded="${open||edit}"><span class="fl">Fokus</span><span class="hint">${f?(leer?'leer seit ':'seit ')+dfmt(f.d):'noch keiner'}</span><span class="chev" aria-hidden="true">${open||edit?'▾':'▸'}</span></button>`;
+  if(edit)return `<section class="card fokus" id="fokus">${kopf}<textarea id="fokusTx" rows="4" placeholder="Worauf achtest du gerade, weil es hilft? Ein Satz je Zeile.">${esc(S.fokusDraft??(f?f.text:''))}</textarea>
+    <div class="row between" style="margin-top:8px"><button class="tog" id="fokusAb" style="font-size:13px">abbrechen</button><button class="btn primary" id="fokusOk">Speichern</button></div></section>`;
+  if(!open)return `<section class="card fokus" id="fokus">${kopf}</section>`;
+  return `<section class="card fokus" id="fokus">${kopf}${leer?'<div class="hint" style="margin-top:6px">Worauf achtest du gerade, weil es hilft? Die wenigen Dinge, die beim Training im Blick bleiben sollen.</div>':`<div class="fokustx" id="fokusText">${esc(f.text)}</div>`}
+    <div class="row between" style="margin-top:8px"><button class="tog" id="fokusEd" style="font-size:13px">${f?'Fokus ändern':'Fokus festlegen'}</button>${alt.length?`<button class="tog" id="fokusAltT" style="font-size:13px">früherer Fokus ${S.fokusAlt?'▾':'▸'}</button>`:''}</div>
+    ${S.fokusAlt&&alt.length?`<div class="fokusalt">${alt.map(o=>`<div><span class="nd">${dfmt(o.d)}</span><div class="fokustx sm">${o.text.trim()?esc(o.text):'leer'}</div></div>`).join('')}</div>`:''}</section>`}
+function fokusBind(){
+  const g=id=>document.getElementById(id);
+  const tg=g('fokusTog'); if(tg)tg.onclick=()=>{if(S.fokusEdit){S.fokusEdit=false;S.fokusOpen=false}else S.fokusOpen=!S.fokusOpen;render()};
+  const ed=g('fokusEd'); if(ed)ed.onclick=()=>{S.fokusEdit=true;if(S.fokusDraft==null){const f=fokusAkt();S.fokusDraft=f?f.text:''}render();const x=g('fokusTx');if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length)}};
+  const tx=g('fokusTx'); if(tx)tx.addEventListener('input',()=>{S.fokusDraft=tx.value;save()});
+  const ab=g('fokusAb'); if(ab)ab.onclick=()=>{S.fokusEdit=false;S.fokusDraft=null;render()};
+  const ok=g('fokusOk'); if(ok)ok.onclick=()=>{const v=(g('fokusTx').value||'').trim();const f=fokusAkt();S.fokusEdit=false;S.fokusDraft=null;S.fokusOpen=true;
+    if(f&&f.text===v){render();toast('Fokus unverändert');return}
+    if(!f&&!v){render();return}
+    if(!Array.isArray(S.fokus))S.fokus=[];
+    const e={d:iso(today),t:Date.now(),text:v};
+    if(f&&f.d===iso(today))S.fokus[S.fokus.length-1]=e;else S.fokus.push(e);
+    save();render();toast('Fokus gespeichert')};
+  const at=g('fokusAltT'); if(at)at.onclick=()=>{S.fokusAlt=!S.fokusAlt;render()};
+}
+
+// ---------- Fragen und Überlegungen (1.0.30, eine Kategorie am Plan, Entscheidung 11.10.2026) ----------
+// Offene Fragen, Plan-Ideen, übergeordnete Richtung. S.fragen=[{id,d,t,n:[{d,t}],done}] (n = datierte Antworten oder Nachträge, done = Tag „erledigt“ oder null).
+// Offene oben (neueste zuerst), erledigte eingeklappt; Tipp öffnet den Eintrag (Text ändern, Nachtrag, erledigt, löschen mit einer Rückfrage).
+let FU_NEU=false;
+function fuNeueId(){return 'f'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36)}
+function fuHtml(){
+  const L=Array.isArray(S.fragen)?S.fragen:[]; const offen=L.filter(x=>!x.done).sort((a,b)=>b.d.localeCompare(a.d)); const erl=L.filter(x=>x.done).sort((a,b)=>b.done.localeCompare(a.done));
+  const row=x=>`<button class="item fu" data-fu="${esc(x.id)}" style="width:100%;text-align:left"><div class="t"><b style="font-weight:600">${esc(x.t)}</b><small>${dfmt(x.d)}${x.n.length?` · ${x.n.length} ${x.n.length===1?'Nachtrag':'Nachträge'}`:''}${x.done?' · erledigt '+dfmt(x.done):''}</small>${x.n.length?`<small class="fulast">${esc(x.n[x.n.length-1].t)}</small>`:''}</div><span class="chev" aria-hidden="true" style="color:var(--ink3)">›</span></button>`;
+  return `<section class="card" id="fuCard"><div class="nhead"><h2 style="margin:0">Fragen und Überlegungen${offen.length?` <span class="badge">${offen.length} offen</span>`:''}</h2>${FU_NEU?'':'<button class="nplus" id="fuPlus" aria-label="Frage oder Überlegung hinzufügen">+</button>'}</div>
+    ${FU_NEU?`<div class="nadd"><input type="text" id="fuTx" enterkeyhint="done" autocomplete="off" placeholder="Frage oder Idee für den Plan" value="${esc(S.fuDraft||'')}"><button class="nok" id="fuOk" aria-label="Speichern">✓</button></div>`:''}
+    <div class="list">${offen.map(row).join('')||(FU_NEU?'':'<div class="hint">Offene Fragen und Ideen für den Plan. „+“ legt eine an.</div>')}</div>
+    ${erl.length?`<button class="tog" id="fuErlT" style="font-size:13px;margin-top:6px">erledigt (${erl.length}) ${S.fuErl?'▾':'▸'}</button>${S.fuErl?`<div class="list">${erl.map(row).join('')}</div>`:''}`:''}</section>`}
+function frageSheet(id,re){
+  const x=(S.fragen||[]).find(o=>o.id===id); if(!x){re();return}
+  openSheet(`<h3>${x.done?'Erledigt '+dfmt(x.done):'Offen'} · seit ${dfmt(x.d)}</h3>
+    <textarea id="fuText" rows="3" aria-label="Frage oder Überlegung">${esc(x.t)}</textarea>
+    ${x.n.length?`<div class="list">${x.n.map(n=>`<div class="item" style="padding:6px 0"><div class="t"><small style="color:var(--ink)"><b>${dfmt(n.d)}</b> ${esc(n.t)}</small></div></div>`).join('')}</div>`:''}
+    <div class="nadd"><input type="text" id="fuN" enterkeyhint="done" autocomplete="off" placeholder="Antwort oder Nachtrag"><button class="nok" id="fuNok" aria-label="Nachtrag speichern">✓</button></div>
+    <button class="btn ${x.done?'ghost':'primary'} wide" id="fuDone">${x.done?'wieder offen':'erledigt'}</button>
+    <button class="tog danger" id="fuDel" style="align-self:flex-start;font-size:13px">löschen</button>`);
+  const tx=document.getElementById('fuText'); tx.addEventListener('input',()=>{const v=tx.value.trim();if(v){x.t=v;save()}});
+  const addN=()=>{const i=document.getElementById('fuN');const v=(i.value||'').trim();if(!v)return;x.n.push({d:iso(today),t:v});save();toast('Nachtrag gespeichert');frageSheet(id,re)};
+  document.getElementById('fuNok').onclick=addN; document.getElementById('fuN').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addN()}});
+  document.getElementById('fuDone').onclick=()=>{x.done=x.done?null:iso(today);save();toast(x.done?'Erledigt':'Wieder offen');backOrClose()};
+  document.getElementById('fuDel').onclick=()=>confirmSheet('Frage oder Überlegung löschen?',()=>{S.fragen=S.fragen.filter(o=>o.id!==id);save();toast('Gelöscht');re()},'Löschen');
+}
+
 // ---------- Analyse (1.0.29, Idee 10. und 11.10.2026, docs/STAND.md „Analyse-Ansicht“) ----------
 // Liste von Tagen, neueste oben, zum Zusammensuchen an schlechten Tagen: Belastung, Symptome morgens → „Später am Tag“ (je Eintrag mit Uhrzeit)
 // → nächster Morgen, Einheiten mit Position, Kennzeichen und Notizen, Änderungen des Tages. Filter: Zeitraum, Suche, Position, „Symptom ↑“.
@@ -2407,10 +2503,11 @@ function anaTag(k,erst){
   const exNotizen=Object.entries(S.exNotes||{}).flatMap(([id,arr])=>inSes.has(id)||!exById(id)?[]:(arr||[]).filter(n=>n&&n.d===k&&n.t).map(n=>({name:exById(id).name,t:n.t})));
   const pv=P().versions.filter(v=>v.from===k&&v.v>1).map(v=>({b:'Plan v'+v.v,t:v.change}));
   const ev=(P().events||[]).filter(e=>e.d===k).map(e=>({b:'Plan',t:e.t}));
+  const fk=(S.fokus||[]).filter(f=>f.d===k).map(f=>({b:'Fokus',t:f.text.trim()||'(leer)',pre:true}));
   const jr=[...(x.note?[{b:'Notiz',t:x.note}]:[]),...(x.notes||[]).map(n=>({b:n.k||'Journal',t:n.t+(n.b?' ('+n.b+')':'')}))];
-  const leer=x.tf==null&&!Object.keys(x.sy||{}).length&&!laterOf(x).length&&!(x.done||[]).length&&!exNotizen.length&&!jr.length&&!pv.length&&!ev.length&&!(x.chips||[]).length;
-  const text=anaLow([...ses.flatMap(o=>(o.ex||[]).flatMap(z=>[z.e.name,...z.notes])),...ses.map(o=>labelOf(o.a.block)),...akt.map(a=>aktLabel(a)+' '+(a.note||'')),...(x.chips||[]),...exNotizen.flatMap(n=>[n.name,n.t]),...pv.map(o=>o.t),...ev.map(o=>o.t),...jr.map(o=>o.t)].join(' \n '));
-  return {k,x,ses,akt,exNotizen,aend:[...pv,...ev],jr,leer,text};
+  const leer=x.tf==null&&!Object.keys(x.sy||{}).length&&!laterOf(x).length&&!(x.done||[]).length&&!exNotizen.length&&!jr.length&&!pv.length&&!ev.length&&!fk.length&&!(x.chips||[]).length;
+  const text=anaLow([...ses.flatMap(o=>(o.ex||[]).flatMap(z=>[z.e.name,...z.notes])),...ses.map(o=>labelOf(o.a.block)),...akt.map(a=>aktLabel(a)+' '+(a.note||'')),...(x.chips||[]),...exNotizen.flatMap(n=>[n.name,n.t]),...fk.map(o=>o.t),...pv.map(o=>o.t),...ev.map(o=>o.t),...jr.map(o=>o.t)].join(' \n '));
+  return {k,x,ses,akt,exNotizen,aend:[...fk,...pv,...ev],jr,leer,text};
 }
 function anaPasst(o){
   if(ANA.q.trim()&&!o.text.includes(ANA.q.trim().toLowerCase()))return false;
@@ -2440,7 +2537,7 @@ function anaTagHtml(o){
   const ses=o.ses.map(sv=>`<div class="anas"><div class="sh"><span class="act ${sv.a.type}">${TYPES[sv.a.type]?TYPES[sv.a.type].l:sv.a.type}</span><b>${anaHl(labelOf(sv.a.block))}</b>${sv.zeit?`<span class="hint">${sv.zeit}</span>`:''}<span class="hint">· ${esc(sv.stand)}</span></div>
     ${sv.ex?`<ul class="anaex">${sv.ex.map(z=>`<li class="${z.weg?'skip':''}${trefferEx(z)?' hit':''}"><span class="en"><b>${anaHl(z.e.name)}</b>${posOf(z.e.pos)?`<span class="pos">${esc(posName(z.e.pos))}</span>`:''}${z.neu?'<span class="badge neu">neu</span>':''}${z.i.extra?'<span class="badge">außerplanmäßig</span>':''}${z.i.pain?'<span class="badge prob">!</span>':''}${z.weg?'<span class="badge">weggelassen</span>':''}${z.offen?'<span class="badge">offen</span>':''}</span>${z.notes.map(t=>`<span class="ananote">${anaHl(t)}</span>`).join('')}</li>`).join('')}</ul>`:''}</div>`).join('');
   const notizen=o.exNotizen.length?`<div class="anaj">${o.exNotizen.map(n=>`<div><span class="badge">Notiz</span><span><b style="font-weight:600;color:var(--ink)">${anaHl(n.name)}</b> ${anaHl(n.t)}</span></div>`).join('')}</div>`:'';
-  const aend=o.aend.length||o.jr.length?`<div class="anaj">${[...o.aend,...o.jr].map(c=>`<div><span class="badge">${esc(c.b)}</span><span>${anaHl(c.t)}</span></div>`).join('')}</div>`:'';
+  const aend=o.aend.length||o.jr.length?`<div class="anaj">${[...o.aend,...o.jr].map(c=>`<div><span class="badge">${esc(c.b)}</span><span${c.pre?' style="white-space:pre-line"':''}>${anaHl(c.t)}</span></div>`).join('')}</div>`:'';
   return `<div class="anad"><button class="anah" data-anad="${o.k}" aria-label="${wd(d)}, ${fmt(d)}: Tagesdetail öffnen"><span class="dd">${wd(d)} ${fmt(d)}</span><span class="hint">Form</span><span class="tf ${cls(x.tf)}">${x.tf??'–'}</span><span class="hint">Schlaf ${x.sleep==null?'–':x.sleep.toLocaleString('de-DE')+' h'+(x.sq?' '+x.sq:'')}</span><span class="chev" aria-hidden="true">›</span></button>
     ${last?`<div class="row" style="gap:6px">${last}</div>`:''}
     ${anaSymTab(o)}
